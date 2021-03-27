@@ -33,6 +33,7 @@ class AGSCreditz1 : public AGSCreditz {
 private:
 	static const char *AGS_GetPluginName();
 	static void AGS_EngineStartup(IAGSEngine *engine);
+	static int64 AGS_EngineOnEvent(int event, NumberPtr data);
 
 	static void SetCredit(ScriptMethodParams &params);
 	static void ScrollCredits(ScriptMethodParams &params);

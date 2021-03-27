@@ -321,7 +321,7 @@ void GameState::processFoundItem(int32 item) {
 	const int32 itemCameraY = _engine->_grid->newCamera.y * BRICK_HEIGHT;
 	const int32 itemCameraZ = _engine->_grid->newCamera.z * BRICK_SIZE;
 
-	uint8 *bodyPtr = _engine->_actor->bodyTable[_engine->_scene->sceneHero->entity];
+	uint8 *bodyPtr = _engine->_resources->bodyTable[_engine->_scene->sceneHero->entity];
 	const int32 bodyX = _engine->_scene->sceneHero->pos.x - itemCameraX;
 	const int32 bodyY = _engine->_scene->sceneHero->pos.y - itemCameraY;
 	const int32 bodyZ = _engine->_scene->sceneHero->pos.z - itemCameraZ;
@@ -361,7 +361,6 @@ void GameState::processFoundItem(int32 item) {
 	_engine->_text->initVoxToPlay(item);
 
 	const int32 bodyAnimIdx = _engine->_animations->getBodyAnimIndex(AnimationTypes::kFoundItem);
-	const uint8 *currentAnim = _engine->_resources->animTable[bodyAnimIdx];
 	const AnimData &currentAnimData = _engine->_resources->animData[bodyAnimIdx];
 
 	AnimTimerDataStruct tmpAnimTimer = _engine->_scene->sceneHero->animTimerData;
@@ -392,7 +391,7 @@ void GameState::processFoundItem(int32 item) {
 		_engine->_interface->resetClip();
 		initEngineProjections();
 
-		if (_engine->_animations->setModelAnimation(currentAnimState, currentAnimData, currentAnim, bodyPtr, &_engine->_scene->sceneHero->animTimerData)) {
+		if (_engine->_animations->setModelAnimation(currentAnimState, currentAnimData, bodyPtr, &_engine->_scene->sceneHero->animTimerData)) {
 			currentAnimState++; // keyframe
 			if (currentAnimState >= currentAnimData.getNumKeyframes()) {
 				currentAnimState = currentAnimData.getLoopFrame();
@@ -453,18 +452,18 @@ void GameState::processFoundItem(int32 item) {
 void GameState::processGameChoices(int32 choiceIdx) {
 	_engine->_screens->copyScreen(_engine->frontVideoBuffer, _engine->workVideoBuffer);
 
-	gameChoicesSettings.reset();
-	gameChoicesSettings.setTextBankId(_engine->_scene->sceneTextBank + TextBankId::Citadel_Island);
+	_gameChoicesSettings.reset();
+	_gameChoicesSettings.setTextBankId(_engine->_scene->sceneTextBank + TextBankId::Citadel_Island);
 
 	// filled via script
 	for (int32 i = 0; i < numChoices; i++) {
-		gameChoicesSettings.addButton(gameChoices[i], 0);
+		_gameChoicesSettings.addButton(gameChoices[i], 0);
 	}
 
 	_engine->_text->drawAskQuestion(choiceIdx);
 
-	_engine->_menu->processMenu(&gameChoicesSettings, false);
-	const int16 activeButton = gameChoicesSettings.getActiveButton();
+	_engine->_menu->processMenu(&_gameChoicesSettings, false);
+	const int16 activeButton = _gameChoicesSettings.getActiveButton();
 	choiceAnswer = gameChoices[activeButton];
 
 	// get right VOX entry index
@@ -501,7 +500,6 @@ void GameState::processGameoverAnimation() {
 		return;
 	}
 
-	Renderer::prepareIsoModel(gameOverPtr);
 	_engine->_sound->stopSamples();
 	_engine->_music->stopMidiMusic(); // stop fade music
 	_engine->_renderer->setCameraPosition(_engine->width() / 2, _engine->height() / 2, 128, 200, 200);
@@ -588,7 +586,14 @@ int16 GameState::setMagicPoints(int16 val) {
 	inventoryMagicPoints = val;
 	if (inventoryMagicPoints > magicLevelIdx * 20) {
 		inventoryMagicPoints = magicLevelIdx * 20;
+	} else if (inventoryMagicPoints < 0) {
+		inventoryMagicPoints = 0;
 	}
+	return inventoryMagicPoints;
+}
+
+int16 GameState::setMaxMagicPoints() {
+	inventoryMagicPoints = magicLevelIdx * 20;
 	return inventoryMagicPoints;
 }
 

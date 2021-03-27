@@ -82,7 +82,7 @@ private:
 	void initGameStateVars();
 	void initHeroVars();
 
-	MenuSettings gameChoicesSettings;
+	MenuSettings _gameChoicesSettings;
 
 	/**
 	 * LBA engine game flags to save quest states
@@ -190,6 +190,7 @@ public:
 	int16 setLeafs(int16 value);
 	int16 setKashes(int16 value);
 	int16 setMagicPoints(int16 val);
+	int16 setMaxMagicPoints();
 	int16 setLeafBoxes(int16 val);
 
 	void addGas(int16 value);

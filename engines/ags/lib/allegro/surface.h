@@ -106,9 +106,15 @@ public:
 	 * Draws the passed surface onto this one
 	 */
 	void draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
-		const Common::Rect &destRect, bool horizFlip, bool vertFlip,
+		int dstX, int dstY, bool horizFlip, bool vertFlip,
 		bool skipTrans, int srcAlpha, int tintRed = -1, int tintGreen = -1,
 		int tintBlue = -1);
+
+	/**
+	 * Stretches and draws the passed surface onto this one
+	 */
+	void stretchDraw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
+		const Common::Rect &destRect, bool skipTrans, int srcAlpha);
 
 private:
 	// True color blender functions
@@ -247,17 +253,16 @@ private:
 	void blendTintSprite(uint8 aSrc, uint8 rSrc, uint8 gSrc, uint8 bSrc, uint8 &aDest, uint8 &rDest, uint8 &gDest, uint8 &bDest, uint32 alpha, bool light) const ;
 
 
-	inline uint32 getColor(const byte *data, byte bpp, uint32* palette) const {
+	inline uint32 getColor(const byte *data, byte bpp) const {
 		switch (bpp) {
 		case 1:
-			assert(palette);
-			return palette[*data];
+			return *data;
 		case 2:
 			return *(const uint16 *)data;
 		case 4:
 			return *(const uint32 *)data;
 		default:
-			error("Unknown format");
+			error("Unsupported format in BITMAP::getColor");
 		}
 	}
 };

@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef TWINE_BODY_H
-#define TWINE_BODY_H
+#ifndef TWINE_PARSER_BODY_H
+#define TWINE_PARSER_BODY_H
 
 #include "common/array.h"
 #include "common/memstream.h"
@@ -119,12 +119,7 @@ public:
 		uint16 value;
 	} bodyFlag;
 
-	int16 minsx = 0;
-	int16 maxsx = 0;
-	int16 minsy = 0;
-	int16 maxsy = 0;
-	int16 minsz = 0;
-	int16 maxsz = 0;
+	BoundingBox bbox;
 	int16 offsetToData = 0;
 
 	inline bool isAnimated() const {

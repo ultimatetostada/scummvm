@@ -41,68 +41,40 @@
 namespace TwinE {
 
 /** Hit Stars shape info */
-static const int16 hitStarsShapeTable[] = {
-    10, // num entries of x and z rotation values
-    0,
-    -20,
-    4,
-    -6,
-    19,
-    -6,
-    7,
-    2,
-    12,
-    16,
-    0,
-    7,
-    -12,
-    16,
-    -7,
-    2,
-    -19,
-    -6,
-    -4,
-    -6};
+static const ShapeData hitStarsData[]{
+	{4, -6},
+	{19, -6},
+	{7, 2},
+	{12, 16},
+	{0, 7},
+	{-12, 16},
+	{-7, 2},
+	{-19, -6},
+	{-4, -6}};
 
 /** Explode Cloud shape info */
-static const int16 explodeCloudShapeTable[] = {
-    18, // num entries of x and z rotation values
-    0,
-    -20,
-    6,
-    -16,
-    8,
-    -10,
-    14,
-    -12,
-    20,
-    -4,
-    18,
-    4,
-    12,
-    4,
-    16,
-    8,
-    8,
-    16,
-    2,
-    12,
-    -4,
-    18,
-    -10,
-    16,
-    -12,
-    8,
-    -16,
-    10,
-    -20,
-    4,
-    -12,
-    -8,
-    -6,
-    -6,
-    -10,
-    -12};
+static const ShapeData explodeCloudData[]{
+	{0, -20},
+	{6, -16},
+	{8, -10},
+	{14, -12},
+	{20, -4},
+	{18, 4},
+	{12, 4},
+	{16, 8},
+	{8, 16},
+	{2, 12},
+	{-4, 18},
+	{-10, 16},
+	{-12, 8},
+	{-16, 10},
+	{-20, 4},
+	{-12, -8},
+	{-6, -6},
+	{-10, -12}};
+
+const ExtraShape hitStarsShape { ARRAYSIZE(hitStarsData), hitStarsData };
+const ExtraShape explodeCloudShape { ARRAYSIZE(explodeCloudData), explodeCloudData };
 
 Extra::Extra(TwinEEngine *engine) : _engine(engine) {}
 
@@ -125,7 +97,7 @@ int32 Extra::addExtra(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx
 
 		_engine->_movements->setActorAngle(ANGLE_0, maxSpeed, ANGLE_17, &extra->trackActorMove);
 		const ActorStruct *actor = _engine->_scene->getActor(targetActor);
-		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(x, z, actor->pos.x, actor->pos.z);
+		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(extra->pos, actor->pos);
 		return i;
 	}
 	return -1;
@@ -258,11 +230,11 @@ int32 Extra::addExtraBonus(int32 x, int32 y, int32 z, int32 xAngle, int32 yAngle
 			continue;
 		}
 		extra->info0 = type;
-		extra->type = ExtraType::TIME_OUT | ExtraType::TAKABLE | ExtraType::FLASH | ExtraType::STOP_COL | ExtraType::BONUS;
+		extra->type = ExtraType::STOP_COL | ExtraType::TAKABLE | ExtraType::BONUS;
 
-		/*if(type == SPRITEHQR_KEY) {
-			extra->type = ExtraFlag::STOP_COL | ExtraFlag::TAKABLE | ExtraFlag::BONUS;
-		}*/
+		if (type != SPRITEHQR_KEY) {
+			extra->type = ExtraType::TIME_OUT | ExtraType::TAKABLE | ExtraType::FLASH | ExtraType::STOP_COL | ExtraType::BONUS;
+		}
 
 		extra->pos.x = x;
 		extra->pos.y = y;
@@ -324,7 +296,7 @@ int32 Extra::addExtraAiming(int32 actorIdx, int32 x, int32 y, int32 z, int32 spr
 		extra->strengthOfHit = strengthOfHit;
 		_engine->_movements->setActorAngle(ANGLE_0, finalAngle, ANGLE_17, &extra->trackActorMove);
 		const ActorStruct *actor = _engine->_scene->getActor(targetActorIdx);
-		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(x, z, actor->pos.x, actor->pos.z);
+		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(extra->pos, actor->pos);
 
 		return i;
 	}
@@ -333,9 +305,9 @@ int32 Extra::addExtraAiming(int32 actorIdx, int32 x, int32 y, int32 z, int32 spr
 }
 
 // cseg01:00018168
-int32 Extra::findExtraKey() {
+int32 Extra::findExtraKey() const {
 	for (int32 i = 0; i < EXTRA_MAX_ENTRIES; i++) {
-		ExtraListStruct *extra = &extraList[i];
+		const ExtraListStruct *extra = &extraList[i];
 		if (extra->info0 == SPRITEHQR_KEY) {
 			return i;
 		}
@@ -352,7 +324,7 @@ int32 Extra::addExtraAimingAtKey(int32 actorIdx, int32 x, int32 y, int32 z, int3
 			continue;
 		}
 		extra->info0 = spriteIdx;
-		extra->type = ExtraType::UNK9;
+		extra->type = ExtraType::MAGIC_BALL_KEY;
 		extra->info1 = 0;
 		extra->pos.x = x;
 		extra->pos.y = y;
@@ -361,7 +333,7 @@ int32 Extra::addExtraAimingAtKey(int32 actorIdx, int32 x, int32 y, int32 z, int3
 		extra->destPos.z = 4000;
 		extra->strengthOfHit = 0;
 		_engine->_movements->setActorAngle(ANGLE_0, 4000, ANGLE_17, &extra->trackActorMove);
-		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(x, z, extraList[extraIdx].pos.x, extraList[extraIdx].pos.z);
+		extra->angle = _engine->_movements->getAngleAndSetTargetActorDistance(extra->pos, extraList[extraIdx].pos);
 
 		return i;
 	}
@@ -430,18 +402,19 @@ void Extra::addExtraThrowMagicball(int32 x, int32 y, int32 z, int32 xAngle, int3
 	}
 }
 
-void Extra::drawSpecialShape(const int16 *shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size) {
-	int16 currentShapeTable = *shapeTable++;
+void Extra::drawSpecialShape(const ExtraShape &shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size) {
+	int shapeDataIndex = 0;
+	int16 shapeX = shapeTable.data[shapeDataIndex].x * size / 16;
+	int16 shapeZ = shapeTable.data[shapeDataIndex].z * size / 16;
 
-	int16 var_x = (*shapeTable++) * size / 16;
-	int16 var_z = (*shapeTable++) * size / 16;
+	++shapeDataIndex;
 
 	_engine->_redraw->renderRect.left = 0x7D00;
 	_engine->_redraw->renderRect.right = -0x7D00;
 	_engine->_redraw->renderRect.top = 0x7D00;
 	_engine->_redraw->renderRect.bottom = -0x7D00;
 
-	_engine->_movements->rotateActor(var_x, var_z, angle);
+	_engine->_movements->rotateActor(shapeX, shapeZ, angle);
 
 	const int32 computedX = _engine->_renderer->destPos.x + x;
 	const int32 computedY = _engine->_renderer->destPos.z + y;
@@ -465,9 +438,10 @@ void Extra::drawSpecialShape(const int16 *shapeTable, int32 x, int32 y, int32 co
 	int32 currentX = computedX;
 	int32 currentY = computedY;
 
-	for (int32 numEntries = 1; numEntries < currentShapeTable; ++numEntries) {
-		var_x = (*shapeTable++) * size / 16;
-		var_z = (*shapeTable++) * size / 16;
+	for (int32 numEntries = 1; numEntries < shapeTable.n; ++numEntries) {
+		shapeX = shapeTable.data[shapeDataIndex].x * size / 16;
+		shapeZ = shapeTable.data[shapeDataIndex].z * size / 16;
+		++shapeDataIndex;
 
 		const int32 oldComputedX = currentX;
 		const int32 oldComputedY = currentY;
@@ -475,7 +449,7 @@ void Extra::drawSpecialShape(const int16 *shapeTable, int32 x, int32 y, int32 co
 		_engine->_renderer->projPos.x = currentX;
 		_engine->_renderer->projPos.y = currentY;
 
-		_engine->_movements->rotateActor(var_x, var_z, angle);
+		_engine->_movements->rotateActor(shapeX, shapeZ, angle);
 
 		currentX = _engine->_renderer->destPos.x + x;
 		currentY = _engine->_renderer->destPos.z + y;
@@ -512,11 +486,11 @@ void Extra::drawSpecialShape(const int16 *shapeTable, int32 x, int32 y, int32 co
 
 void Extra::drawExtraSpecial(int32 extraIdx, int32 x, int32 y) {
 	ExtraListStruct *extra = &extraList[extraIdx];
-	ExtraSpecialType specialType = (ExtraSpecialType)(extra->info0 & 0x7FFF);
+	ExtraSpecialType specialType = (ExtraSpecialType)(extra->info0 & (EXTRA_SPECIAL_MASK - 1));
 
 	switch (specialType) {
 	case ExtraSpecialType::kHitStars:
-		drawSpecialShape(hitStarsShapeTable, x, y, COLOR_WHITE, (_engine->lbaTime * 32) & ANGLE_270, 4);
+		drawSpecialShape(hitStarsShape, x, y, COLOR_WHITE, (_engine->lbaTime * 32) & ANGLE_270, 4);
 		break;
 	case ExtraSpecialType::kExplodeCloud: {
 		int32 cloudTime = 1 + _engine->lbaTime - extra->spawnTime;
@@ -525,7 +499,7 @@ void Extra::drawExtraSpecial(int32 extraIdx, int32 x, int32 y) {
 			cloudTime = 32;
 		}
 
-		drawSpecialShape(explodeCloudShapeTable, x, y, COLOR_WHITE, 0, cloudTime);
+		drawSpecialShape(explodeCloudShape, x, y, COLOR_WHITE, ANGLE_0, cloudTime);
 		break;
 	}
 	}
@@ -570,7 +544,7 @@ void Extra::processExtras() {
 			}
 		}
 		// reset extra
-		if (extra->type & ExtraType::UNK11) {
+		if (extra->type & ExtraType::RESET_EXTRA) {
 			extra->info0 = -1;
 			continue;
 		}
@@ -637,7 +611,7 @@ void Extra::processExtras() {
 			currentExtraY = actor->pos.y + 1000;
 			currentExtraZ = actor->pos.z;
 
-			const int32 tmpAngle = _engine->_movements->getAngleAndSetTargetActorDistance(extra->pos.x, extra->pos.z, currentExtraX, currentExtraZ);
+			const int32 tmpAngle = _engine->_movements->getAngleAndSetTargetActorDistance(extra->pos, actor->pos);
 			const int32 angle = ClampAngle(tmpAngle - extra->angle);
 
 			if (angle > ANGLE_140 && angle < ANGLE_210) {
@@ -678,8 +652,8 @@ void Extra::processExtras() {
 			}
 		}
 		// process magic ball extra aiming for key
-		if (extra->type & ExtraType::UNK9) {
-			//				int32 actorIdxAttacked = extra->lifeTime;
+		if (extra->type & ExtraType::MAGIC_BALL_KEY) {
+			// int32 actorIdxAttacked = extra->lifeTime;
 			ExtraListStruct *extraKey = &extraList[extra->payload.extraIdx];
 			const int32 extraIdx = extra->payload.extraIdx;
 

@@ -886,6 +886,7 @@ const PlainGameDescriptor GAME_NAMES[] = {
 	{ "mordy2", "Mordy2" },
 	{ "mothersday", "Mothers Day" },
 	{ "motlpaa", "MOTLPAA" },
+	{ "mountainofmadness", "Mountain of Madness" },
 	{ "mourirenmer", "Mourir en mer" },
 	{ "mrbee", "Mr Bee" },
 	{ "mrdangerscontest", "Mr. Danger's Contest" },
@@ -1582,6 +1583,8 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	// "room animations are no longer supported"
 	UNSUPPORTED_GAME_ENTRY("zak2", "Zak2.exe", "e88fd6a23a5e498d7b0d50e3bb914085", 8686711),
 	UNSUPPORTED_GAME_ENTRY("zak2", "TFG - ZAK2.exe", "7971a7c02d414dc8cb33b6ec36080b91", 155632013),
+	// uses unsupported agslua plugin
+	UNSUPPORTED_GAME_ENTRY("allthewaydown", "deepuns3.exe", "6c0b5468657c22d62201e3769cd8d2b3", 29830067),
 
 	// AGDI games. They get their own grouping because they're just that awesome
 	GAME_ENTRY("kq1agdi", "kqvga.exe", "73f87b30f84e9c34ab09ec8dd7ae109d", 34298679),  // 1.0
@@ -1682,6 +1685,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY("geminirue", "gemini rue.exe", "f3c0c7d3892bdd8963e8ce017f73de08", 61986506), // GOG
 	GAME_ENTRY("geminirue", "gemini_rue_pc.exe", "83362d0d2c1d4909bfbd85c04c95bde2", 72960932), // Steam
 	GAME_ENTRY("geminirue", "gemini_rue_pc.exe", "f49a61ea46feb86f89de3c136ad809ff", 73412249), // Steam
+	GAME_ENTRY_PLUGIN("geminirue", "agsgame.dat", "f3c0c7d3892bdd8963e8ce017f73de08", 62059297, AGSTEAM_BLACKWELL), // Steam Linux
 	GAME_ENTRY("geminirue", "gemini_rue_pc.exe", "e8f1d07a6b363e9cc80dac5367f1b4ba", 72860463), // Humble Bundle
 	GAME_ENTRY("geminirue", "ac2game.dat", "f3c0c7d3892bdd8963e8ce017f73de08", 62852566), // Android
 	GAME_ENTRY("geminirue", "ac2game.dat", "e8f1d07a6b363e9cc80dac5367f1b4ba", 72836785), // MacOS, Humble Bundle
@@ -1915,7 +1919,6 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY("alienthreat", "alien threat.exe", "f120690b506dd63cd7d1112ea6af2f77", 6341266),
 	GAME_ENTRY("alientimezone", "atz.exe", "0710e2ec71042617f565c01824f0cf3c", 2911858),
 	GAME_ENTRY("allpigs", "All pigs deserve to burn in hell.exe", "973f6b65820ca1f4e19704a49be99d76", 20836147),
-	GAME_ENTRY("allthewaydown", "deepuns3.exe", "6c0b5468657c22d62201e3769cd8d2b3", 29830067),
 	GAME_ENTRY("aloneinthenight", "alone.exe", "0710e2ec71042617f565c01824f0cf3c", 9501343),
 	GAME_ENTRY("alphadog", "alpha_dog.exe", "a01a9639ce30bdcd5bf82e528b51fa06", 3329253),
 	GAME_ENTRY("alphax", "alphax.exe", "06a03fe35791b0578068ab1873455463", 17879795),
@@ -2530,6 +2533,7 @@ const AGSGameDescription GAME_DESCRIPTIONS[] = {
 	GAME_ENTRY("mordy2", "Mordy2.exe", "0710e2ec71042617f565c01824f0cf3c", 5186329),
 	GAME_ENTRY("mothersday", "mothersday.exe", "0b7529a76f38283d6e850b8d56526fc1", 1816363),
 	GAME_ENTRY("motlpaa", "MOTLPAA.exe", "0710e2ec71042617f565c01824f0cf3c", 1575258),
+	GAME_ENTRY("mountainofmadness", "MountainsOfMadness.exe", "95822b7957b8f239d3216b9209cfb1f5", 337894184), // Steam
 	GAME_ENTRY("mourirenmer", "Mourir.exe", "e88fd6a23a5e498d7b0d50e3bb914085", 2519706),
 	GAME_ENTRY("mrbee", "BEE.exe", "95dcf736be87cf7d40bf64d5b078c4b7", 45542087),
 	GAME_ENTRY("mrdangerscontest", "Danger.exe", "06a03fe35791b0578068ab1873455463", 7096987),

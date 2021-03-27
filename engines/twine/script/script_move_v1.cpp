@@ -102,7 +102,7 @@ static int32 mBODY(TwinEEngine *engine, MoveScriptContext &ctx) {
  */
 static int32 mANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
 	AnimationTypes animIdx = (AnimationTypes)ctx.stream.readByte();
-	if (engine->_animations->initAnim(animIdx, kAnimationTypeLoop, AnimationTypes::kStanding, ctx.actorIdx)) {
+	if (engine->_animations->initAnim(animIdx, AnimType::kAnimationTypeLoop, AnimationTypes::kStanding, ctx.actorIdx)) {
 		return 0;
 	}
 	ctx.undo(1);
@@ -116,7 +116,7 @@ static int32 mANIM(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mGOTO_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
 	engine->_scene->currentScriptValue = ctx.stream.readByte();
 
-	const Vec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
+	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
 	engine->_renderer->destPos.x = sp.x;
 	engine->_renderer->destPos.y = sp.y;
 	engine->_renderer->destPos.z = sp.z;
@@ -188,7 +188,7 @@ static int32 mANGLE(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mPOS_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
 	engine->_scene->currentScriptValue = ctx.stream.readByte();
 
-	const Vec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
+	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
 	engine->_renderer->destPos.x = sp.x;
 	engine->_renderer->destPos.y = sp.y;
 	engine->_renderer->destPos.z = sp.z;
@@ -248,7 +248,7 @@ static int32 mSTOP(TwinEEngine *engine, MoveScriptContext &ctx) {
 static int32 mGOTO_SYM_POINT(TwinEEngine *engine, MoveScriptContext &ctx) {
 	engine->_scene->currentScriptValue = ctx.stream.readByte();
 
-	const Vec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
+	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
 	engine->_renderer->destPos.x = sp.x;
 	engine->_renderer->destPos.y = sp.y;
 	engine->_renderer->destPos.z = sp.z;
@@ -321,14 +321,13 @@ static int32 mGOTO_POINT_3D(TwinEEngine *engine, MoveScriptContext &ctx) {
 
 	engine->_scene->currentScriptValue = trackId;
 
-	const Vec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
+	const IVec3 &sp = engine->_scene->sceneTracks[engine->_scene->currentScriptValue];
 	engine->_renderer->destPos.x = sp.x;
 	engine->_renderer->destPos.y = sp.y;
 	engine->_renderer->destPos.z = sp.z;
 
 	ctx.actor->angle = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.x, ctx.actor->pos.z, sp.x, sp.z);
-	// TODO: this adds an angle to the animType value
-	ctx.actor->animType = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.y, 0, sp.y, engine->_movements->targetActorDistance);
+	ctx.actor->spriteActorRotation = engine->_movements->getAngleAndSetTargetActorDistance(ctx.actor->pos.y, 0, sp.y, engine->_movements->targetActorDistance);
 
 	if (engine->_movements->targetActorDistance > 100) {
 		ctx.undo(1);

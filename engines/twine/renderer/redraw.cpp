@@ -50,7 +50,7 @@ void Redraw::addRedrawCurrentArea(const Common::Rect &redrawArea) {
 	const int32 area = (redrawArea.right - redrawArea.left) * (redrawArea.bottom - redrawArea.top);
 
 	for (int32 i = 0; i < numOfRedrawBox; ++i) {
-		Common::Rect &rect = currentRedrawList[i];
+		Common::Rect &rect = _currentRedrawList[i];
 		const int32 leftValue = MIN<int32>(redrawArea.left, rect.left);
 		const int32 rightValue = MAX<int32>(redrawArea.right, rect.right);
 		const int32 topValue = MIN<int32>(redrawArea.top, rect.top);
@@ -70,7 +70,7 @@ void Redraw::addRedrawCurrentArea(const Common::Rect &redrawArea) {
 		}
 	}
 
-	Common::Rect &rect = currentRedrawList[numOfRedrawBox];
+	Common::Rect &rect = _currentRedrawList[numOfRedrawBox];
 	rect.left = redrawArea.left;
 	rect.top = redrawArea.top;
 	rect.right = redrawArea.right;
@@ -107,7 +107,7 @@ void Redraw::addRedrawArea(int32 left, int32 top, int32 right, int32 bottom) {
 		return;
 	}
 
-	Common::Rect &rect = nextRedrawList[currNumOfRedrawBox];
+	Common::Rect &rect = _nextRedrawList[currNumOfRedrawBox];
 	rect.left = left;
 	rect.top = top;
 	rect.right = right;
@@ -122,25 +122,25 @@ void Redraw::moveNextAreas() {
 	numOfRedrawBox = 0;
 
 	for (int32 i = 0; i < currNumOfRedrawBox; i++) {
-		addRedrawCurrentArea(nextRedrawList[i]);
+		addRedrawCurrentArea(_nextRedrawList[i]);
 	}
 }
 
 void Redraw::flipRedrawAreas() {
 	for (int32 i = 0; i < numOfRedrawBox; i++) { // redraw areas on screen
-		_engine->copyBlockPhys(currentRedrawList[i].left, currentRedrawList[i].top, currentRedrawList[i].right, currentRedrawList[i].bottom);
+		_engine->copyBlockPhys(_currentRedrawList[i].left, _currentRedrawList[i].top, _currentRedrawList[i].right, _currentRedrawList[i].bottom);
 	}
 
 	numOfRedrawBox = 0;
 
 	for (int32 i = 0; i < currNumOfRedrawBox; i++) { //setup the redraw areas for next display
-		addRedrawCurrentArea(nextRedrawList[i]);
+		addRedrawCurrentArea(_nextRedrawList[i]);
 	}
 }
 
 void Redraw::blitBackgroundAreas() {
 	for (int32 i = 0; i < numOfRedrawBox; i++) {
-		_engine->_interface->blitBox(currentRedrawList[i], _engine->workVideoBuffer, _engine->frontVideoBuffer);
+		_engine->_interface->blitBox(_currentRedrawList[i], _engine->workVideoBuffer, _engine->frontVideoBuffer);
 	}
 }
 
@@ -192,7 +192,7 @@ int32 Redraw::fillActorDrawingList(bool bgRedraw) {
 		ActorStruct *actor = _engine->_scene->getActor(modelActorPos);
 		actor->dynamicFlags.bIsVisible = 0; // reset visible state
 
-		if (_engine->_grid->useCellingGrid != -1 && actor->pos.y > _engine->_scene->sceneZones[_engine->_grid->cellingGridIdx].topRight.y) {
+		if (_engine->_grid->useCellingGrid != -1 && actor->pos.y > _engine->_scene->sceneZones[_engine->_grid->cellingGridIdx].maxs.y) {
 			continue;
 		}
 		// no redraw required
@@ -342,15 +342,14 @@ void Redraw::processDrawListActors(const DrawListStruct &drawCmd, bool bgRedraw)
 	const int32 actorIdx = drawCmd.actorIdx;
 	ActorStruct *actor = _engine->_scene->getActor(actorIdx);
 	if (actor->previousAnimIdx >= 0) {
-		const uint8 *animPtr = _engine->_resources->animTable[actor->previousAnimIdx];
 		const AnimData &animData = _engine->_resources->animData[actor->previousAnimIdx];
-		_engine->_animations->setModelAnimation(actor->animPosition, animData, animPtr, _engine->_actor->bodyTable[actor->entity], &actor->animTimerData);
+		_engine->_animations->setModelAnimation(actor->animPosition, animData, _engine->_resources->bodyTable[actor->entity], &actor->animTimerData);
 	}
 
 	const int32 x = actor->pos.x - _engine->_grid->camera.x;
 	const int32 y = actor->pos.y - _engine->_grid->camera.y;
 	const int32 z = actor->pos.z - _engine->_grid->camera.z;
-	if (!_engine->_renderer->renderIsoModel(x, y, z, ANGLE_0, actor->angle, ANGLE_0, _engine->_actor->bodyTable[actor->entity])) {
+	if (!_engine->_renderer->renderIsoModel(x, y, z, ANGLE_0, actor->angle, ANGLE_0, _engine->_resources->bodyTable[actor->entity])) {
 		return;
 	}
 
@@ -436,9 +435,9 @@ void Redraw::processDrawListActorSprites(const DrawListStruct &drawCmd, bool bgR
 			const int32 tmpZ = (actor->lastPos.z + BRICK_HEIGHT) / BRICK_SIZE;
 			_engine->_grid->drawOverSpriteActor(tmpX, tmpY, tmpZ);
 		} else {
-			const int32 tmpX = (actor->pos.x + actor->boudingBox.x.topRight + BRICK_HEIGHT) / BRICK_SIZE;
+			const int32 tmpX = (actor->pos.x + actor->boudingBox.maxs.x + BRICK_HEIGHT) / BRICK_SIZE;
 			int32 tmpY = actor->pos.y / BRICK_HEIGHT;
-			const int32 tmpZ = (actor->pos.z + actor->boudingBox.z.topRight + BRICK_HEIGHT) / BRICK_SIZE;
+			const int32 tmpZ = (actor->pos.z + actor->boudingBox.maxs.z + BRICK_HEIGHT) / BRICK_SIZE;
 			if (actor->brickShape() != ShapeType::kNone) {
 				tmpY++;
 			}
@@ -458,13 +457,13 @@ void Redraw::processDrawListActorSprites(const DrawListStruct &drawCmd, bool bgR
 }
 
 void Redraw::processDrawListExtras(const DrawListStruct &drawCmd) {
-	int32 actorIdx = drawCmd.actorIdx;
-	ExtraListStruct *extra = &_engine->_extra->extraList[actorIdx];
+	int32 extraIdx = drawCmd.actorIdx;
+	ExtraListStruct *extra = &_engine->_extra->extraList[extraIdx];
 
 	_engine->_renderer->projectPositionOnScreen(extra->pos - _engine->_grid->camera);
 
 	if (extra->info0 & EXTRA_SPECIAL_MASK) {
-		_engine->_extra->drawExtraSpecial(actorIdx, _engine->_renderer->projPos.x, _engine->_renderer->projPos.y);
+		_engine->_extra->drawExtraSpecial(extraIdx, _engine->_renderer->projPos.x, _engine->_renderer->projPos.y);
 	} else {
 		const SpriteData &spritePtr = _engine->_resources->spriteData[extra->info0];
 		const int32 spriteWidth = spritePtr.surface().w;
@@ -542,7 +541,7 @@ void Redraw::renderOverlays() {
 			case OverlayPosType::koFollowActor: {
 				ActorStruct *actor2 = _engine->_scene->getActor(overlay->info1);
 
-				_engine->_renderer->projectPositionOnScreen(actor2->pos.x - _engine->_grid->camera.x, actor2->pos.y + actor2->boudingBox.y.topRight - _engine->_grid->camera.y, actor2->pos.z - _engine->_grid->camera.z);
+				_engine->_renderer->projectPositionOnScreen(actor2->pos.x - _engine->_grid->camera.x, actor2->pos.y + actor2->boudingBox.maxs.y - _engine->_grid->camera.y, actor2->pos.z - _engine->_grid->camera.z);
 
 				overlay->x = _engine->_renderer->projPos.x;
 				overlay->y = _engine->_renderer->projPos.y;
@@ -624,9 +623,9 @@ void Redraw::renderOverlays() {
 				_engine->_interface->drawFilledRect(rect, COLOR_BLACK);
 				_engine->_interface->setClip(rect);
 
-				uint8* bodyPtr = _engine->_resources->inventoryTable[item];
-				overlayRotation += 1; // overlayRotation += 8;
-				_engine->_renderer->renderInventoryItem(40, 40, bodyPtr, overlayRotation, 16000);
+				const uint8* bodyPtr = _engine->_resources->inventoryTable[item];
+				_overlayRotation += 1; // overlayRotation += 8;
+				_engine->_renderer->renderInventoryItem(40, 40, bodyPtr, _overlayRotation, 16000);
 				_engine->_menu->drawBox(rect);
 				addRedrawArea(rect);
 				_engine->_gameState->initEngineProjections();
@@ -738,7 +737,7 @@ void Redraw::redrawEngineActions(bool bgRedraw) {
 		_engine->_screens->lockPalette = false;
 	}
 
-	if (_engine->_redraw->inSceneryView) {
+	if (inSceneryView) {
 		zoomScreenScale();
 	}
 }
@@ -747,7 +746,7 @@ void Redraw::drawBubble(int32 actorIdx) {
 	ActorStruct *actor = _engine->_scene->getActor(actorIdx);
 
 	// get actor position on screen
-	_engine->_renderer->projectPositionOnScreen(actor->pos.x - _engine->_grid->camera.x, actor->pos.y + actor->boudingBox.y.topRight - _engine->_grid->camera.y, actor->pos.z - _engine->_grid->camera.z);
+	_engine->_renderer->projectPositionOnScreen(actor->pos.x - _engine->_grid->camera.x, actor->pos.y + actor->boudingBox.maxs.y - _engine->_grid->camera.y, actor->pos.z - _engine->_grid->camera.z);
 
 	if (actorIdx != bubbleActor) {
 		bubbleSpriteIndex = bubbleSpriteIndex ^ 1;

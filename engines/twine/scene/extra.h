@@ -32,30 +32,40 @@ namespace TwinE {
 
 #define EXTRA_SPECIAL_MASK 0x8000
 
+struct ShapeData {
+	int16 x;
+	int16 z;
+};
+
+struct ExtraShape {
+	int n;
+	const ShapeData *data;
+};
+
 enum ExtraType {
-	TIME_OUT = 1 << 0,     // 0x0001
-	FLY = 1 << 1,          // 0x0002
-	UNK2 = 1 << 2,         // 0x0004
-	UNK3 = 1 << 3,         // 0x0008
-	STOP_COL = 1 << 4,     // 0x0010
-	TAKABLE = 1 << 5,      // 0x0020
-	FLASH = 1 << 6,        // 0x0040
-	UNK7 = 1 << 7,         // 0x0080
-	UNK8 = 1 << 8,         // 0x0100
-	UNK9 = 1 << 9,         // 0x0200
-	TIME_IN = 1 << 10,     // 0x0400
-	UNK11 = 1 << 11,       // 0x0800
-	EXPLOSION = 1 << 12,   // 0x1000
-	WAIT_NO_COL = 1 << 13, // 0x2000
-	BONUS = 1 << 14,       // 0x4000
-	UNK15 = 1 << 15        // 0x8000
+	TIME_OUT = 1 << 0,       // 0x0001
+	FLY = 1 << 1,            // 0x0002
+	UNK2 = 1 << 2,           // 0x0004
+	UNK3 = 1 << 3,           // 0x0008
+	STOP_COL = 1 << 4,       // 0x0010
+	TAKABLE = 1 << 5,        // 0x0020
+	FLASH = 1 << 6,          // 0x0040
+	UNK7 = 1 << 7,           // 0x0080
+	UNK8 = 1 << 8,           // 0x0100
+	MAGIC_BALL_KEY = 1 << 9, // 0x0200
+	TIME_IN = 1 << 10,       // 0x0400
+	RESET_EXTRA = 1 << 11,   // 0x0800
+	EXPLOSION = 1 << 12,     // 0x1000
+	WAIT_NO_COL = 1 << 13,   // 0x2000
+	BONUS = 1 << 14,         // 0x4000
+	UNK15 = 1 << 15          // 0x8000
 };
 
 struct ExtraListStruct {
 	int16 info0 = 0; /**< a value of -1 indicates that this instance is free to use */
-	Vec3 pos;
-	Vec3 lastPos;
-	Vec3 destPos;
+	IVec3 pos;
+	IVec3 lastPos;
+	IVec3 destPos;
 
 	ActorMoveStruct trackActorMove;
 
@@ -80,9 +90,9 @@ private:
 
 	void throwExtra(ExtraListStruct *extra, int32 xAngle, int32 yAngle, int32 x, int32 extraAngle);
 	void processMagicballBounce(ExtraListStruct *extra, int32 x, int32 y, int32 z);
-	int32 findExtraKey();
+	int32 findExtraKey() const;
 	int32 addExtraAimingAtKey(int32 actorIdx, int32 x, int32 y, int32 z, int32 spriteIdx, int32 extraIdx);
-	void drawSpecialShape(const int16 *shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size);
+	void drawSpecialShape(const ExtraShape &shapeTable, int32 x, int32 y, int32 color, int32 angle, int32 size);
 
 public:
 	Extra(TwinEEngine *engine);

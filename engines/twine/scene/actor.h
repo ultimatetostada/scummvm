@@ -24,6 +24,7 @@
 #define TWINE_ACTOR_H
 
 #include "common/scummsys.h"
+#include "twine/parser/anim.h"
 #include "twine/parser/body.h"
 #include "twine/parser/entity.h"
 #include "twine/shared.h"
@@ -57,22 +58,9 @@ struct ActorMoveStruct {
 	int32 getRealValue(int32 time);
 };
 
-/** Actors zone volumique points structure */
-struct ZVPoint {
-	int16 bottomLeft = 0;
-	int16 topRight = 0;
-};
-
-/** Actors zone volumique box structure */
-struct ZVBox {
-	ZVPoint x;
-	ZVPoint y;
-	ZVPoint z;
-};
-
 /** Actors animation timer structure */
 struct AnimTimerDataStruct {
-	const uint8 *ptr = nullptr;
+	const KeyFrame *ptr = nullptr;
 	int32 time = 0;
 };
 
@@ -95,12 +83,12 @@ struct StaticFlagsStruct {
 	uint32 bIsCarrierActor : 1;             // 0x004000
 	// take smaller value for bound, or if not set take average for bound
 	uint32 bUseMiniZv : 1;                  // 0x008000
-	uint32 bHasInvalidPosition : 1;          // 0x010000
-	uint32 bNoElectricShock : 1;             // 0x020000
-	uint32 bHasSpriteAnim3D : 1;             // 0x040000
-	uint32 bNoPreClipping : 1;               // 0x080000
-	uint32 bHasZBuffer : 1;                  // 0x100000
-	uint32 bHasZBufferInWater : 1;           // 0x200000
+	uint32 bHasInvalidPosition : 1;         // 0x010000
+	uint32 bNoElectricShock : 1;            // 0x020000
+	uint32 bHasSpriteAnim3D : 1;            // 0x040000
+	uint32 bNoPreClipping : 1;              // 0x080000
+	uint32 bHasZBuffer : 1;                 // 0x100000
+	uint32 bHasZBufferInWater : 1;          // 0x200000
 };
 
 /** Actors dynamic flags structure */
@@ -134,28 +122,30 @@ struct DynamicFlagsStruct {
  * will be chosen randomly each time player uses Action.
  */
 struct BonusParameter {
-	uint32 unk1 : 1;
-	uint32 unk2 : 1;
-	uint32 unk3 : 1;
-	uint32 unk4 : 1;
-	uint32 kashes : 1;
-	uint32 lifepoints : 1;
-	uint32 magicpoints : 1;
-	uint32 key : 1;
-	uint32 cloverleaf : 1;
-	uint32 unused : 23;
+	uint16 unk1 : 1;
+	uint16 unk2 : 1;
+	uint16 unk3 : 1;
+	uint16 unk4 : 1;
+	uint16 kashes : 1;
+	uint16 lifepoints : 1;
+	uint16 magicpoints : 1;
+	uint16 key : 1;
+	uint16 cloverleaf : 1;
+	uint16 unused : 7;
 };
 
-#define kAnimationTypeLoop 0
-#define kAnimationType_1 1
-// play animation and let animExtra follow as next animation
-// if there is already a next animation set - replace the value
-#define kAnimationType_2 2
-// replace animation and let the current animation follow
-#define kAnimationType_3 3
-// play animation and let animExtra follow as next animation
-// but don't take the current state in account
-#define kAnimationType_4 4
+enum class AnimType {
+	kAnimationTypeLoop = 0,
+	kAnimationType_1 = 1,
+	// play animation and let animExtra follow as next animation
+	// if there is already a next animation set - replace the value
+	kAnimationType_2 = 2,
+	// replace animation and let the current animation follow
+	kAnimationType_3 = 3,
+	// play animation and let animExtra follow as next animation
+	// but don't take the current state in account
+	kAnimationType_4 = 4
+};
 
 #define kActorMaxLife 50
 
@@ -198,7 +188,7 @@ public:
 	bool isJumpAnimationActive() const;
 
 	int16 actorIdx = 0; // own actor index
-	Vec3 pos;
+	IVec3 pos;
 	int32 strengthOfHit = 0; // field_66
 	int32 hitBy = 0;
 	BonusParameter bonusParameter; // field_10
@@ -220,7 +210,7 @@ public:
 
 	void setLife(int32 val);
 
-	Vec3 collisionPos;
+	IVec3 collisionPos;
 
 	int32 positionInMoveScript = 0;
 	uint8 *moveScript = nullptr;
@@ -240,14 +230,15 @@ public:
 	int32 zone = 0;
 
 	int32 lastRotationAngle = ANGLE_0;
-	Vec3 lastPos;
+	IVec3 lastPos;
 	int32 previousAnimIdx = 0;
 	int32 doorStatus = 0;
 	int32 animPosition = 0;
-	int32 animType = kAnimationTypeLoop;   // field_78
+	AnimType animType = AnimType::kAnimationTypeLoop;   // field_78
+	int32 spriteActorRotation = 0;
 	int32 brickSound = 0; // field_7A
 
-	ZVBox boudingBox;
+	BoundingBox boudingBox;
 	ActorMoveStruct move;
 	AnimTimerDataStruct animTimerData;
 };
@@ -270,20 +261,23 @@ private:
 	TwinEEngine *_engine;
 
 	/** Hero 3D entity for normal behaviour */
-	uint8 *heroEntityNORMAL = nullptr; // file3D0
-	int32 heroEntityNORMALSize = 0;
+	uint8 *_heroEntityNORMAL = nullptr;
+	int32 _heroEntityNORMALSize = 0;
 	/** Hero 3D entity for athletic behaviour */
-	uint8 *heroEntityATHLETIC = nullptr; // file3D1
-	int32 heroEntityATHLETICSize = 0;
+	uint8 *_heroEntityATHLETIC = nullptr;
+	int32 _heroEntityATHLETICSize = 0;
 	/** Hero 3D entity for aggressive behaviour */
-	uint8 *heroEntityAGGRESSIVE = nullptr; // file3D2
-	int32 heroEntityAGGRESSIVESize = 0;
+	uint8 *_heroEntityAGGRESSIVE = nullptr;
+	int32 _heroEntityAGGRESSIVESize = 0;
 	/** Hero 3D entity for discrete behaviour */
-	uint8 *heroEntityDISCRETE = nullptr; // file3D3
-	int32 heroEntityDISCRETESize = 0;
+	uint8 *_heroEntityDISCRETE = nullptr;
+	int32 _heroEntityDISCRETESize = 0;
 	/** Hero 3D entity for protopack behaviour */
-	uint8 *heroEntityPROTOPACK = nullptr; // file3D4
-	int32 heroEntityPROTOPACKSize = 0;
+	uint8 *_heroEntityPROTOPACK = nullptr;
+	int32 _heroEntityPROTOPACKSize = 0;
+
+	/** Current position in body table */
+	int32 _currentPositionInBodyPtrTab;
 
 	void initSpriteActor(int32 actorIdx);
 
@@ -300,12 +294,10 @@ public:
 	Actor(TwinEEngine *engine);
 	~Actor();
 
-	ActorStruct *processActorPtr = nullptr; // processActorVar1
+	ActorStruct *processActorPtr = nullptr;
 
 	/** Actor shadow coordinate */
-	Vec3 shadowCoord;
-	/** Actor shadow collition type - brick shape */
-	ShapeType shadowCollisionType = ShapeType::kNone; // shadowVar
+	IVec3 shadowCoord;
 
 	HeroBehaviourType heroBehaviour = HeroBehaviourType::kNormal;
 	/** Hero auto aggressive mode */
@@ -318,26 +310,19 @@ public:
 	int16 cropBottomScreen = 0;
 
 	/** Hero current anim for normal behaviour */
-	int16 heroAnimIdxNORMAL = 0; // TCos0Init
+	int16 heroAnimIdxNORMAL = 0;
 	/** Hero current anim for athletic behaviour */
-	int16 heroAnimIdxATHLETIC = 0; // TCos1Init
+	int16 heroAnimIdxATHLETIC = 0;
 	/** Hero current anim for aggressive behaviour */
-	int16 heroAnimIdxAGGRESSIVE = 0; // TCos2Init
+	int16 heroAnimIdxAGGRESSIVE = 0;
 	/** Hero current anim for discrete behaviour */
-	int16 heroAnimIdxDISCRETE = 0; // TCos3Init
+	int16 heroAnimIdxDISCRETE = 0;
 	/** Hero current anim for protopack behaviour */
-	int16 heroAnimIdxPROTOPACK = 0; // TCos4Init
+	int16 heroAnimIdxPROTOPACK = 0;
 
 	/** Hero anim for behaviour menu */
-	int16 heroAnimIdx[4]; // TCOS
+	int16 heroAnimIdx[4];
 
-	/** Actors 3D body table - size of NUM_BODIES */
-	uint8 *bodyTable[NUM_BODIES]{nullptr};
-	int32 bodyTableSize[NUM_BODIES]{0};
-	BodyData bodyData[NUM_BODIES];
-
-	/** Current position in body table */
-	int32 currentPositionInBodyPtrTab;
 	void clearBodyTable();
 
 	/** Restart hero variables while opening new scenes */
@@ -353,9 +338,6 @@ public:
 	 * @param behaviour behaviour value to set
 	 */
 	void setBehaviour(HeroBehaviourType behaviour);
-
-	/** Preload all sprites */
-	void preloadSprites();
 
 	/**
 	 * Initialize 3D actor

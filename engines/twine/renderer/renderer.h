@@ -38,6 +38,7 @@
 #define POLYGONTYPE_TRAME 6
 #define POLYGONTYPE_GOURAUD 7
 #define POLYGONTYPE_DITHER 8
+#define POLYGONTYPE_UNKNOWN 9
 
 namespace Common {
 class MemoryReadStream;
@@ -60,14 +61,14 @@ struct CmdRenderPolygon {
 	// followed by Vertex array
 };
 
-struct Matrix {
-	int32 row1[3]{0, 0, 0};
-	int32 row2[3]{0, 0, 0};
-	int32 row3[3]{0, 0, 0};
+struct IMatrix3x3 {
+	IVec3 row1;
+	IVec3 row2;
+	IVec3 row3;
 };
 
-inline Matrix operator*(const Matrix &matrix, const Vec3 &vec) {
-	Matrix out;
+inline IMatrix3x3 operator*(const IMatrix3x3 &matrix, const IVec3 &vec) {
+	IMatrix3x3 out;
 	out.row1[0] = matrix.row1[0] * vec.x;
 	out.row1[1] = matrix.row1[1] * vec.x;
 	out.row1[2] = matrix.row1[2] * vec.x;
@@ -82,58 +83,29 @@ inline Matrix operator*(const Matrix &matrix, const Vec3 &vec) {
 	return out;
 }
 
-struct Model {
-	struct BodyFlags {
-		uint16 unk1 : 1;            // 1 << 0
-		uint16 animated : 1;        // 1 << 1
-		uint16 unk3 : 1;            // 1 << 2
-		uint16 unk4 : 1;            // 1 << 3
-		uint16 unk5 : 1;            // 1 << 4
-		uint16 unk6 : 1;            // 1 << 5
-		uint16 unk7 : 1;            // 1 << 6
-		uint16 alreadyPrepared : 1; // 1 << 7
-		uint16 unk9 : 1;            // 1 << 8
-		uint16 unk10 : 1;           // 1 << 9
-		uint16 unk11 : 1;           // 1 << 10
-		uint16 unk12 : 1;           // 1 << 11
-		uint16 unk13 : 1;           // 1 << 12
-		uint16 unk14 : 1;           // 1 << 13
-		uint16 unk15 : 1;           // 1 << 14
-		uint16 unk16 : 1;           // 1 << 15
-	} bodyFlag;
-	int16 minsx = 0;
-	int16 maxsx = 0;
-	int16 minsy = 0;
-	int16 maxsy = 0;
-	int16 minsz = 0;
-	int16 maxsz = 0;
-	int16 offsetToData = 0;
+#include "common/pack-start.h"
+struct BonesBaseData {
+	int16 firstPoint = 0;  // data1
+	int16 numOfPoints = 0; // data2
+	int16 basePoint = 0;   // data3
+	int16 baseElement = 0; // param
+	int16 flag = 0;
+	int16 rotateZ = 0;
+	int16 rotateY = 0;
+	int16 rotateX = 0;
+	int16 unk1 = 0; // field_10
+	int16 numOfShades = 0;
+	int16 unk2 = 0;
+	int32 field_18 = 0;
+	int32 y = 0;
+	int32 field_20 = 0;
+	int32 field_24 = 0;
+};
+#include "common/pack-end.h"
+static_assert(sizeof(BonesBaseData) == 38, "Unexpected elementEntry size");
 
-	static inline bool isAnimated(const uint8 *bodyPtr) {
-		const int16 bodyHeader = READ_LE_INT16(bodyPtr);
-		return (bodyHeader & 2) != 0;
-	}
-
-	static inline bool isAnimated(const BodyData &bodyPtr) {
-		return bodyPtr.isAnimated();
-	}
-
-	static uint8 *getData(uint8 *bodyPtr) {
-		return bodyPtr + 0x1A;
-	}
-
-	static const uint8 *getData(const uint8 *bodyPtr) {
-		return bodyPtr + 0x1A;
-	}
-
-	static const uint8 *getVerticesBaseData(const uint8 *bodyPtr) {
-		return getData(bodyPtr) + 2;
-	}
-
-	static const Common::Array<BodyVertex> &getVerticesBaseData(const BodyData &bodyPtr) {
-		return bodyPtr.getVertices();
-	}
-
+class Model {
+private:
 	static uint8 *getBonesData(uint8 *bodyPtr) {
 		uint8 *verticesBase = getData(bodyPtr);
 		const int16 numVertices = READ_LE_INT16(verticesBase);
@@ -146,43 +118,46 @@ struct Model {
 		return verticesBase + 2 + numVertices * 6;
 	}
 
-	static const uint8 *getBonesStateData(const uint8 *bodyPtr, int boneIdx) {
-		return getBonesBaseData(bodyPtr) + 8 + (boneIdx * 38);
+	static uint8 *getData(uint8 *bodyPtr) {
+		return bodyPtr + 0x1A;
 	}
 
-	static uint8 *getBonesStateData(uint8 *bodyPtr, int boneIdx) {
-		return getBonesBaseData(bodyPtr) + 8 + (boneIdx * 38);
+	static const uint8 *getData(const uint8 *bodyPtr) {
+		return bodyPtr + 0x1A;
+	}
+public:
+	static inline bool isAnimated(const uint8 *bodyPtr) {
+		const int16 bodyHeader = READ_LE_INT16(bodyPtr);
+		return (bodyHeader & 2) != 0;
 	}
 
-	static BoneFrame *getBonesStateData(BodyData &bodyPtr, int boneIdx) {
-		return bodyPtr.getBoneState(boneIdx);
+	static const uint8 *getVerticesBaseData(const uint8 *bodyPtr) {
+		return getData(bodyPtr) + 2;
 	}
 
-	static const BoneFrame *getBonesStateData(const BodyData &bodyPtr, int boneIdx) {
-		return bodyPtr.getBoneState(boneIdx);
+	static const BoneFrame *getBonesStateData(const uint8 *bodyPtr, int boneIdx) {
+		assert(boneIdx <= getNumBones(bodyPtr));
+		return (const BoneFrame*)((const uint8*)getBonesBaseData(bodyPtr) + 8 + (boneIdx * sizeof(BonesBaseData)));
 	}
 
-	static uint8 *getBonesBaseData(uint8 *bodyPtr) {
-		return getBonesData(bodyPtr) + 2;
+	static BoneFrame *getBonesStateData(uint8 *bodyPtr, int boneIdx) {
+		assert(boneIdx <= getNumBones(bodyPtr));
+		return (BoneFrame*)((uint8*)getBonesBaseData(bodyPtr) + 8 + (boneIdx * sizeof(BonesBaseData)));
 	}
 
-	static const uint8 *getBonesBaseData(const uint8 *bodyPtr, int boneIdx = 0) {
-		return getBonesData(bodyPtr) + 2 + (boneIdx * 38);
+	static BonesBaseData *getBonesBaseData(uint8 *bodyPtr, int boneIdx = 0) {
+		assert(boneIdx <= getNumBones(bodyPtr));
+		return (BonesBaseData *)(getBonesData(bodyPtr) + 2 + (boneIdx * sizeof(BonesBaseData)));
 	}
 
-	static const BoneFrame *getBonesBaseData(const BodyData &bodyPtr, int boneIdx = 0) {
-		return bodyPtr.getBoneState(boneIdx);
+	static const BonesBaseData *getBonesBaseData(const uint8 *bodyPtr, int boneIdx = 0) {
+		assert(boneIdx <= getNumBones(bodyPtr));
+		return (const BonesBaseData *)(getBonesData(bodyPtr) + 2 + (boneIdx * sizeof(BonesBaseData)));
 	}
 
 	static int16 getNumBones(const uint8 *bodyPtr) {
-		const uint8 *verticesBase = getData(bodyPtr);
-		const int16 numVertices = READ_LE_INT16(verticesBase);
-		const uint8 *bonesBase = verticesBase + 2 + numVertices * 6;
+		const uint8 *bonesBase = getBonesData(bodyPtr);
 		return READ_LE_INT16(bonesBase);
-	}
-
-	static int16 getNumBones(const BodyData &bodyPtr) {
-		return bodyPtr.getNumBones();
 	}
 
 	static int16 getNumVertices(const uint8 *bodyPtr) {
@@ -190,28 +165,14 @@ struct Model {
 		return READ_LE_INT16(verticesBase);
 	}
 
-	static int16 getNumVertices(const BodyData &bodyPtr) {
-		return bodyPtr.getNumVertices();
-	}
-
-	static uint8 *getShadesData(uint8 *bodyPtr) {
-		uint8 *bonesBase = getBonesBaseData(bodyPtr);
-		const int16 numBones = getNumBones(bodyPtr);
-		return bonesBase + numBones * 38;
-	}
-
 	static const uint8 *getShadesBaseData(const uint8 *bodyPtr, int16 shadeIdx = 0) {
+		assert(shadeIdx <= getNumShades(bodyPtr));
 		return getShadesData(bodyPtr) + 2 + (shadeIdx * 8);
 	}
 
-	static const BodyShade *getShadesBaseData(const BodyData &bodyPtr, int16 shadeIdx = 0) {
-		return bodyPtr.getShade(shadeIdx);
-	}
-
 	static const uint8 *getShadesData(const uint8 *bodyPtr) {
-		const uint8 *bonesBase = getBonesBaseData(bodyPtr);
 		const int16 numBones = getNumBones(bodyPtr);
-		return bonesBase + numBones * 38;
+		return (const uint8 *)getBonesBaseData(bodyPtr, numBones);
 	}
 
 	static int16 getNumShades(const uint8 *bodyPtr) {
@@ -219,17 +180,8 @@ struct Model {
 		return READ_LE_INT16(shadesBase);
 	}
 
-	static int16 getNumShades(const BodyData &bodyPtr) {
-		return bodyPtr.getShades().size();
-	}
-
 	static int16 getNumShadesBone(const uint8 *bodyPtr, int boneIdx) {
-		const uint8 *bonesBase = getBonesBaseData(bodyPtr);
-		return READ_LE_INT16(bonesBase + (boneIdx * 38) + 18);
-	}
-
-	static int16 getNumShadesBone(const BodyData &bodyPtr, int boneIdx) {
-		return bodyPtr.getBone(boneIdx)->numOfShades;
+		return getBonesBaseData(bodyPtr, boneIdx)->numOfShades;
 	}
 
 	static const uint8 *getPolygonData(const uint8 *bodyPtr) {
@@ -240,32 +192,12 @@ struct Model {
 		}
 		const int16 bones = getNumBones(bodyPtr);
 		for (int16 boneIdx = 0; boneIdx < bones; ++boneIdx) {
-			int16 numOfShades = Model::getNumShadesBone(bodyPtr, boneIdx);
+			int16 numOfShades = getNumShadesBone(bodyPtr, boneIdx);
 			shades += numOfShades * 8;
 		}
 		return shades;
 	}
 };
-
-#include "common/pack-start.h"
-struct elementEntry {
-	int16 firstPoint = 0;  // data1
-	int16 numOfPoints = 0; // data2
-	int16 basePoint = 0;   // data3
-	int16 baseElement = 0; // param
-	int16 flag = 0;
-	int16 rotateZ = 0;
-	int16 rotateY = 0;
-	int16 rotateX = 0;
-	int32 numOfShades = 0; // field_10
-	int32 field_14 = 0;
-	int32 field_18 = 0;
-	int32 y = 0;
-	int32 field_20 = 0;
-	int16 field_24 = 0;
-};
-#include "common/pack-end.h"
-static_assert(sizeof(elementEntry) == 38, "Unexpected elementEntry size");
 
 class Renderer {
 private:
@@ -274,9 +206,18 @@ private:
 	struct RenderCommand {
 		int16 depth = 0;
 		int16 renderType = 0;
+		/**
+		 * Pointer to the command data
+		 * @sa renderCoordinatesBuffer
+		 */
 		uint8 *dataPtr = nullptr;
 	};
 
+	/**
+	 * @brief A render command payload for drawing a line
+	 *
+	 * @sa RenderCommand
+	 */
 	struct CmdRenderLine {
 		uint8 colorIndex = 0;
 		uint8 unk1 = 0;
@@ -288,6 +229,11 @@ private:
 		int16 y2 = 0;
 	};
 
+	/**
+	 * @brief A render command payload for drawing a sphere
+	 *
+	 * @sa RenderCommand
+	 */
 	struct CmdRenderSphere {
 		int8 colorIndex = 0;
 		int16 x = 0;
@@ -317,42 +263,35 @@ private:
 
 	ModelData _modelData;
 
-	bool renderAnimatedModel(ModelData *modelData, const uint8 *bodyPtr, RenderCommand *renderCmds);
+	bool renderAnimatedModel(ModelData *modelData, const uint8 *bodyPtr, RenderCommand *renderCmds, const IVec3 &angleVec, const IVec3 &renderPos);
 	void circleFill(int32 x, int32 y, int32 radius, uint8 color);
 	bool renderModelElements(int32 numOfPrimitives, const uint8 *polygonPtr, RenderCommand **renderCmds, ModelData *modelData);
 	void getCameraAnglePositions(int32 x, int32 y, int32 z);
-	void applyRotation(Matrix *targetMatrix, const Matrix *currentMatrix);
-	void applyPointsRotation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const Matrix *rotationMatrix);
-	void processRotatedElement(Matrix *targetMatrix, const pointTab *pointsPtr, int32 rotZ, int32 rotY, int32 rotX, const elementEntry *elemPtr, ModelData *modelData);
-	void applyPointsTranslation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const Matrix *translationMatrix);
-	void processTranslatedElement(Matrix *targetMatrix, const pointTab *pointsPtr, int32 rotX, int32 rotY, int32 rotZ, const elementEntry *elemPtr, ModelData *modelData);
+	void applyRotation(IMatrix3x3 *targetMatrix, const IMatrix3x3 *currentMatrix, const IVec3 &angleVec);
+	void applyPointsRotation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const IMatrix3x3 *rotationMatrix);
+	void processRotatedElement(IMatrix3x3 *targetMatrix, const pointTab *pointsPtr, int32 rotZ, int32 rotY, int32 rotX, const BonesBaseData *boneData, ModelData *modelData);
+	void applyPointsTranslation(const pointTab *pointsPtr, int32 numPoints, pointTab *destPoints, const IMatrix3x3 *translationMatrix, const IVec3 &angleVec);
+	void processTranslatedElement(IMatrix3x3 *targetMatrix, const pointTab *pointsPtr, int32 rotX, int32 rotY, int32 rotZ, const BonesBaseData *boneData, ModelData *modelData);
 	void translateGroup(int32 x, int32 y, int32 z);
 
-	// ---- variables ----
+	IVec3 _baseTransPos;
+	IVec3 _orthoProjPos;
 
-	Vec3 baseTransPos;
+	int32 _cameraDepthOffset = 0;
+	int32 _cameraScaleY = 0;
+	int32 _cameraScaleZ = 0;
 
-	int32 cameraDepthOffset = 0; // cameraVar1
-	int32 cameraScaleY = 0; // cameraVar2
-	int32 cameraScaleZ = 0; // cameraVar3
-
-	// ---
-
-	int32 renderAngleX = 0; // _angleX
-	int32 renderAngleY = 0; // _angleY
-	int32 renderAngleZ = 0; // _angleZ
-
-	Vec3 renderPos;
-
-	// ---
-
-	Matrix baseMatrix;
-	Matrix matricesTable[30 + 1];
-	Matrix shadeMatrix;
-	Vec3 lightPos;
+	IMatrix3x3 _baseMatrix;
+	IMatrix3x3 _matricesTable[30 + 1];
+	IMatrix3x3 _shadeMatrix;
+	IVec3 _lightPos;
 
 	RenderCommand _renderCmds[1000];
-	uint8 renderCoordinatesBuffer[10000]{0};
+	/**
+	 * @brief Raw buffer for holding the render commands. This is a type followed by the command data
+	 * that is needed to render the primitive.
+	 */
+	uint8 _renderCoordinatesBuffer[10000]{0};
 
 	int32 _polyTabSize = 0;
 	int16 *_polyTab = nullptr;
@@ -366,17 +305,17 @@ private:
 	int16* _holomap_polytab_1_2_ptr = nullptr;
 	int16* _holomap_polytab_1_3_ptr = nullptr;
 
-	bool isUsingOrthoProjection = false;
+	bool _isUsingOrthoProjection = false;
 
-	void renderPolygonsCopper(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsBopper(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsFlat(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsTele(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsTras(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonTrame(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsGouraud(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsDither(uint8 *out, int vtop, int32 vsize, int32 color) const;
-	void renderPolygonsMarble(uint8 *out, int vtop, int32 vsize, int32 color) const;
+	void renderPolygonsCopper(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsBopper(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsFlat(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsTele(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsTras(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsTrame(uint8 *out, int vtop, int32 vsize, uint8 color) const;
+	void renderPolygonsGouraud(uint8 *out, int vtop, int32 vsize) const;
+	void renderPolygonsDither(uint8 *out, int vtop, int32 vsize) const;
+	void renderPolygonsMarble(uint8 *out, int vtop, int32 vsize, uint8 color) const;
 
 	void computeBoundingBox(Vertex *vertices, int32 numVertices, int &vleft, int &vright, int &vtop, int &vbottom) const;
 	void computePolygons(int16 polyRenderType, const Vertex *vertices, int32 numVertices);
@@ -398,26 +337,24 @@ public:
 
 	void init(int32 w, int32 h);
 
-	Vec3 projPosScreen;
-	Vec3 projPos;
-	Vec3 baseRotPos;
-	Vec3 orthoProjPos;
-	Vec3 destPos;
-	Vec3 getHolomapRotation(const int32 angleX, const int32 angleY, const int32 angleZ) const;
+	IVec3 projPosScreen;
+	IVec3 projPos;
+	IVec3 baseRotPos;
+	IVec3 destPos;
+	IVec3 getHolomapRotation(const int32 angleX, const int32 angleY, const int32 angleZ) const;
 
 	void setLightVector(int32 angleX, int32 angleY, int32 angleZ);
 	void getBaseRotationPosition(int32 x, int32 y, int32 z);
 
-	static void prepareIsoModel(uint8 *bodyPtr);
 	void renderPolygons(const CmdRenderPolygon &polygon, Vertex *vertices);
 
-	inline int32 projectPositionOnScreen(const Vec3& pos) {
+	inline int32 projectPositionOnScreen(const IVec3& pos) {
 		return projectPositionOnScreen(pos.x, pos.y, pos.z);
 	}
 
 	int32 projectPositionOnScreen(int32 cX, int32 cY, int32 cZ);
 
-	inline void projectXYPositionOnScreen(const Vec3& pos) {
+	inline void projectXYPositionOnScreen(const IVec3& pos) {
 		projectXYPositionOnScreen(pos.x, pos.y, pos.z);
 	}
 	void projectXYPositionOnScreen(int32 x,int32 y,int32 z);

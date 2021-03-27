@@ -690,6 +690,10 @@ begin_credits("Credits");
 				add_person("Eugene Sandulenko", "sev", "");
 			end_section();
 
+			begin_section("Buried");
+				add_person("Matthew Hoops", "clone2727", "");
+			end_section();
+
 			begin_section("CGE");
 				add_person("Arnaud Boutonn&eacute;", "Strangerke", "");
 				add_person("Paul Gilbert", "dreammaster", "");
@@ -949,6 +953,10 @@ begin_credits("Credits");
 				add_person("Eugene Sandulenko", "sev", "");
 				add_person("&#321;ukasz W&#261;tka", "lukaslw", "");
 				add_person("Kamil Zbr&oacute;g", "", "");
+			end_section();
+
+			begin_section("Private");
+				add_person("Gustavo Grieco", "neuromancer", "");
 			end_section();
 
 			begin_section("Queen");
@@ -1529,7 +1537,7 @@ begin_credits("Credits");
 				add_person("Janne Huttunen", "", "V3 actor mask support, Dig/FT SMUSH audio");
 				add_person("Kov&aacute;cs Endre J&aacute;nos", "", "Several fixes for Simon1");
 				add_person("Jeroen Janssen", "japj", "Numerous readability and bugfix patches");
-				add_person("Keith Kaisershot", "blitter", "Several Pegasus Prime patches");
+				add_person("Keith Kaisershot", "blitter", "Several Pegasus Prime patches and DVD additions");
 				add_person("Andreas Karlsson", "Sprawl", "Initial port for SymbianOS");
 				add_person("Stefan Kristiansson", "skristiansson", "Initial work on SDL2 support");
 				add_person("Claudio Matsuoka", "", "Daily Linux builds");
@@ -1748,8 +1756,9 @@ begin_credits("Credits");
 			"support while porting the engine to ScummVM.");
 
 		add_paragraph(
-			"Bob Bell, Michel Kripalani, Tommy Yune, from Presto Studios for ".
-			"providing the source code of The Journeyman Project: Pegasus Prime.");
+			"Bob Bell, David Black, Michel Kripalani, and Tommy Yune from Presto Studios ".
+			"for providing the source code of The Journeyman Project: Pegasus Prime ".
+			"and The Journeyman Project 2: Buried in Time.");
 
 		add_paragraph(
 			"Electronic Arts IP Preservation Team, particularly Stefan Serbicki, and Vasyl Tsvirkunov of ".

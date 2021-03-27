@@ -53,12 +53,13 @@ void BodyData::loadBones(Common::SeekableReadStream &stream) {
 		boneframe.x = stream.readSint16LE();
 		boneframe.y = stream.readSint16LE();
 		boneframe.z = stream.readSint16LE();
-		const int32 numOfShades = stream.readSint32LE();
-		/*int32 field_14 =*/ stream.readSint32LE();
+		/*int16 unk1 =*/ stream.readSint16LE();
+		const int16 numOfShades = stream.readSint16LE();
+		/*int16 unk2 =*/ stream.readSint16LE();
 		/*int32 field_18 =*/ stream.readSint32LE();
 		/*int32 y =*/ stream.readSint32LE();
 		/*int32 field_20 =*/ stream.readSint32LE();
-		/*int16 field_24 =*/ stream.readSint16LE();
+		/*int32 field_24 =*/ stream.readSint32LE();
 
 		BodyBone bone;
 		bone.parent = baseElementOffset == -1 ? 0xffff : baseElementOffset / 38;
@@ -100,14 +101,14 @@ void BodyData::loadPolygons(Common::SeekableReadStream &stream) {
 
 		poly.color = stream.readUint16LE();
 		int16 intensity = -1;
-		if (poly.renderType >= 7 && poly.renderType < 9) {
+		if (poly.renderType == POLYGONTYPE_GOURAUD || poly.renderType == POLYGONTYPE_DITHER) {
 			intensity = stream.readSint16LE();
 		}
 
 		poly.indices.reserve(numVertex);
 		poly.intensities.reserve(numVertex);
 		for (int k = 0; k < numVertex; ++k) {
-			if (poly.renderType >= 9) {
+			if (poly.renderType >= POLYGONTYPE_UNKNOWN) {
 				intensity = stream.readSint16LE();
 			}
 			const uint16 vertexIndex = stream.readUint16LE() / 6;
@@ -149,12 +150,12 @@ void BodyData::loadSpheres(Common::SeekableReadStream &stream) {
 
 bool BodyData::loadFromStream(Common::SeekableReadStream &stream) {
 	bodyFlag.value = stream.readUint16LE();
-	minsx = stream.readSint16LE();
-	maxsx = stream.readSint16LE();
-	minsy = stream.readSint16LE();
-	maxsy = stream.readSint16LE();
-	minsz = stream.readSint16LE();
-	maxsz = stream.readSint16LE();
+	bbox.mins.x = stream.readSint16LE();
+	bbox.maxs.x = stream.readSint16LE();
+	bbox.mins.y = stream.readSint16LE();
+	bbox.maxs.y = stream.readSint16LE();
+	bbox.mins.z = stream.readSint16LE();
+	bbox.maxs.z = stream.readSint16LE();
 
 	stream.seek(0x1A);
 	loadVertices(stream);

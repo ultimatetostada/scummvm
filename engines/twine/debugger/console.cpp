@@ -50,6 +50,7 @@ TwinEConsole::TwinEConsole(TwinEEngine *engine) : _engine(engine), GUI::Debugger
 	registerCmd("toggle_debug", WRAP_METHOD(TwinEConsole, doToggleDebug));
 	registerCmd("toggle_zones", WRAP_METHOD(TwinEConsole, doToggleZoneRendering));
 	registerCmd("toggle_tracks", WRAP_METHOD(TwinEConsole, doToggleTrackRendering));
+	registerCmd("toggle_autoagressive", WRAP_METHOD(TwinEConsole, doToggleAutoAggressive));
 	registerCmd("toggle_actors", WRAP_METHOD(TwinEConsole, doToggleActorRendering));
 	registerCmd("toggle_clips", WRAP_METHOD(TwinEConsole, doToggleClipRendering));
 	registerCmd("toggle_freecamera", WRAP_METHOD(TwinEConsole, doToggleFreeCamera));
@@ -112,6 +113,11 @@ bool TwinEConsole::doToggleSceneryView(int argc, const char **argv) {
 	return true;
 }
 
+bool TwinEConsole::doToggleAutoAggressive(int argc, const char **argv) {
+	TOGGLE_DEBUG(_engine->_actor->autoAggressive, "auto aggressive\n")
+	return true;
+}
+
 bool TwinEConsole::doAddMagicPoints(int argc, const char **argv) {
 	if (argc < 2) {
 		debugPrintf("Usage: specify the magic points\n");
@@ -119,7 +125,7 @@ bool TwinEConsole::doAddMagicPoints(int argc, const char **argv) {
 	}
 	const int16 magicPoints = atoi(argv[1]);
 	_engine->_gameState->magicLevelIdx = CLIP<int16>(magicPoints, 0, 4);
-	_engine->_gameState->inventoryMagicPoints = _engine->_gameState->magicLevelIdx * 20;
+	_engine->_gameState->setMaxMagicPoints();
 	return true;
 }
 
@@ -306,7 +312,7 @@ bool TwinEConsole::doListMenuText(int argc, const char **argv) {
 }
 
 bool TwinEConsole::doSetHeroPosition(int argc, const char **argv) {
-	Vec3 &pos = _engine->_scene->sceneHero->pos;
+	IVec3 &pos = _engine->_scene->sceneHero->pos;
 	if (argc < 4) {
 		debugPrintf("Current hero position: %i:%i:%i\n", pos.x, pos.y, pos.z);
 		return true;

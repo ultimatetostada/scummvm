@@ -37,10 +37,10 @@ private:
 public:
 	Collision(TwinEEngine *engine);
 	/** Actor collision coordinate */
-	Vec3 collision;
+	IVec3 collision;
 
 	/** Actor collision coordinate */
-	Vec3 processCollision;
+	IVec3 processCollision;
 
 	/** Cause damage in current processed actor */
 	int32 causeActorDamage = 0; //fieldCauseDamage
@@ -50,9 +50,9 @@ public:
 	 * @param actorIdx1 Actor 1 index
 	 * @param actorIdx2 Actor 2 index
 	 */
-	bool standingOnActor(int32 actorIdx1, int32 actorIdx2);
+	bool standingOnActor(int32 actorIdx1, int32 actorIdx2) const;
 
-	int32 getAverageValue(int32 start, int32 end, int32 maxDelay, int32 delay);
+	int32 getAverageValue(int32 start, int32 end, int32 maxDelay, int32 delay) const;
 
 	/**
 	 * Reajust actor position in scene according with brick shape bellow actor

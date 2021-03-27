@@ -34,21 +34,19 @@ class TwinEEngine;
 class Animations {
 private:
 	TwinEEngine *_engine;
-	void applyAnimStepRotation(uint8 *ptr, int32 deltaTime, int32 keyFrameLength, const uint8 *keyFramePtr, const uint8 *lastKeyFramePtr);
-	void applyAnimStepTranslation(uint8 *ptr, int32 deltaTime, int32 keyFrameLength, const uint8 *keyFramePtr, const uint8 *lastKeyFramePtr);
-	int32 getAnimMode(uint8 *ptr, const uint8 *keyFramePtr);
+	int16 applyAnimStepRotation(int32 deltaTime, int32 keyFrameLength, int16 newAngle1, int16 lastAngle1) const;
+	int16 applyAnimStepTranslation(int32 deltaTime, int32 keyFrameLength, int16 newPos, int16 lastPos) const;
 
 	/**
 	 * Verify animation at keyframe
 	 * @param keyframeIdx Animation key frame index
 	 * @param animData Animation data
-	 * @param animPtr Animation pointer
 	 * @param animTimerDataPtr Animation time data
 	 */
-	bool verifyAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, const uint8 *animPtr, AnimTimerDataStruct *animTimerDataPtr);
+	bool verifyAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, AnimTimerDataStruct *animTimerDataPtr);
 
-	uint8 *const animBuffer;
-	uint8 *animBufferPos = nullptr;
+	int animKeyframeBufIdx = 0;
+	KeyFrame animKeyframeBuf[32];
 
 	/** Rotation by anim and not by engine */
 	int16 processRotationByAnim = 0; // processActorVar5
@@ -64,7 +62,6 @@ private:
 
 public:
 	Animations(TwinEEngine *engine);
-	~Animations();
 
 	/** Current process actor index */
 	int16 currentlyProcessedActorIdx = 0;
@@ -74,22 +71,20 @@ public:
 	/**
 	 * Set animation keyframe
 	 * @param keyframIdx Animation keyframe index
-	 * @param animPtr Pointer to animation
+	 * @param animData Animation data
 	 * @param bodyPtr Body model poitner
 	 * @param animTimerDataPtr Animation time data
 	 */
-	void setAnimAtKeyframe(int32 keyframeIdx, const uint8 *animPtr, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
-
-	const uint8 *getKeyFrameData(int32 frameIdx, const uint8 *animPtr);
+	void setAnimAtKeyframe(int32 keyframeIdx, const AnimData &animData, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
 
 	/**
 	 * Set new body animation
 	 * @param keyframeIdx Animation key frame index
-	 * @param animPtr Animation pointer
+	 * @param animData Animation data
 	 * @param bodyPtr Body model poitner
 	 * @param animTimerDataPtr Animation time data
 	 */
-	bool setModelAnimation(int32 keyframeIdx, const AnimData &animData, const uint8 *animPtr, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
+	bool setModelAnimation(int32 keyframeIdx, const AnimData &animData, uint8 *const bodyPtr, AnimTimerDataStruct *animTimerDataPtr);
 
 	/**
 	 * Get entity anim index (This is taken from File3D entities)
@@ -112,7 +107,7 @@ public:
 	 * @param animExtra animation actions extra data
 	 * @param actorIdx actor index
 	 */
-	bool initAnim(AnimationTypes newAnim, int16 animType, AnimationTypes animExtra, int32 actorIdx);
+	bool initAnim(AnimationTypes newAnim, AnimType animType, AnimationTypes animExtra, int32 actorIdx);
 
 	/**
 	 * Process acotr animation actions

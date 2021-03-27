@@ -535,17 +535,17 @@ int TwinEEngine::getRandomNumber(uint max) {
 }
 
 void TwinEEngine::freezeTime() {
-	if (!isTimeFreezed) {
-		saveFreezedTime = lbaTime;
+	if (!_isTimeFreezed) {
+		_saveFreezedTime = lbaTime;
 		_pauseToken = pauseEngine();
 	}
-	isTimeFreezed++;
+	_isTimeFreezed++;
 }
 
 void TwinEEngine::unfreezeTime() {
-	--isTimeFreezed;
-	if (isTimeFreezed == 0) {
-		lbaTime = saveFreezedTime;
+	--_isTimeFreezed;
+	if (_isTimeFreezed == 0) {
+		lbaTime = _saveFreezedTime;
 		_pauseToken.clear();
 	}
 }
@@ -611,7 +611,7 @@ void TwinEEngine::processInventoryAction() {
 				_actor->setBehaviour(HeroBehaviourType::kNormal);
 			}
 			_actor->initModelActor(BodyType::btSabre, OWN_ACTOR_SCENE_INDEX);
-			_animations->initAnim(AnimationTypes::kSabreUnknown, kAnimationType_1, AnimationTypes::kStanding, OWN_ACTOR_SCENE_INDEX);
+			_animations->initAnim(AnimationTypes::kSabreUnknown, AnimType::kAnimationType_1, AnimationTypes::kStanding, OWN_ACTOR_SCENE_INDEX);
 
 			_gameState->usingSabre = true;
 		}
@@ -835,12 +835,12 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 		}
 	}
 
-	loopActorStep = loopMovePtr.getRealValue(lbaTime);
+	loopActorStep = _loopMovePtr.getRealValue(lbaTime);
 	if (!loopActorStep) {
 		loopActorStep = 1;
 	}
 
-	_movements->setActorAngle(ANGLE_0, -ANGLE_90, ANGLE_1, &loopMovePtr);
+	_movements->setActorAngle(ANGLE_0, -ANGLE_90, ANGLE_1, &_loopMovePtr);
 	disableScreenRecenter = false;
 
 	_scene->processEnvironmentSound();
@@ -861,7 +861,7 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 
 		if (actor->life == 0) {
 			if (IS_HERO(a)) {
-				_animations->initAnim(AnimationTypes::kLandDeath, kAnimationType_4, AnimationTypes::kStanding, 0);
+				_animations->initAnim(AnimationTypes::kLandDeath, AnimType::kAnimationType_4, AnimationTypes::kStanding, 0);
 				actor->controlMode = ControlMode::kNoMove;
 			} else {
 				_sound->playSample(Samples::Explode, 1, actor->pos, a);
@@ -909,7 +909,7 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 					if (IS_HERO(a)) {
 						if (_actor->heroBehaviour != HeroBehaviourType::kProtoPack || actor->anim != AnimationTypes::kForward) {
 							if (!_actor->cropBottomScreen) {
-								_animations->initAnim(AnimationTypes::kDrawn, kAnimationType_4, AnimationTypes::kStanding, 0);
+								_animations->initAnim(AnimationTypes::kDrawn, AnimType::kAnimationType_4, AnimationTypes::kStanding, 0);
 								_renderer->projectPositionOnScreen(actor->pos - _grid->camera);
 								_actor->cropBottomScreen = _renderer->projPos.y;
 							}
@@ -939,7 +939,7 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 						_scene->sceneHero->pos = _scene->newHeroPos;
 
 						_scene->needChangeScene = _scene->currentSceneIdx;
-						_gameState->inventoryMagicPoints = _gameState->magicLevelIdx * 20;
+						_gameState->setMaxMagicPoints();
 
 						_grid->centerOnActor(_scene->sceneHero);
 
@@ -953,7 +953,7 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 					} else { // game over
 						_gameState->setLeafBoxes(2);
 						_gameState->setLeafs(1);
-						_gameState->setMagicPoints(_gameState->magicLevelIdx * 20);
+						_gameState->setMaxMagicPoints();
 						_actor->heroBehaviour = _actor->previousHeroBehaviour;
 						actor->angle = _actor->previousHeroAngle;
 						actor->setLife(kActorMaxLife);
@@ -1005,7 +1005,7 @@ int32 TwinEEngine::runGameEngine() { // mainLoopInteration
 bool TwinEEngine::gameEngineLoop() {
 	_redraw->reqBgRedraw = true;
 	_screens->lockPalette = true;
-	_movements->setActorAngle(ANGLE_0, -ANGLE_90, ANGLE_1, &loopMovePtr);
+	_movements->setActorAngle(ANGLE_0, -ANGLE_90, ANGLE_1, &_loopMovePtr);
 
 	while (quitGame == -1) {
 		uint32 start = g_system->getMillis();

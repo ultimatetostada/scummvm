@@ -15,6 +15,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Added support for Crimson Crown
    - Added support for OO-Topos
    - Added support for Glulx interactive fiction games
+   - Added support for Private Eye (US release)
 
  New ports:
    - The Nintendo DS port got a major rewrite.
@@ -23,6 +24,7 @@ For a more comprehensive changelog of the latest experimental code, see:
    - Switched ScummVM GUI output to UTF-32.
    - Updated the Roland MT-32 emulation code to the Munt project's mt32emu 2.4.2.
    - Updated Dropbox Cloud Storage to use the new Dropbox OAuth workflow.
+   - Major extension to the number of supported graphics scalers.
 
  AGOS:
    - Added support for the Japanese PC-98 version of Elvira 1.
@@ -45,7 +47,6 @@ For a more comprehensive changelog of the latest experimental code, see:
 
  Grim:
    - Added support for Brazillian Portuguese Grim Fandango.
-   - Added support for Russian EMI.
 
  Kyra:
    - Added support for the Japanese Sega-CD version of Eye of the Beholder.
@@ -54,6 +55,9 @@ For a more comprehensive changelog of the latest experimental code, see:
  Lure:
    - Fixed fire animation in first room when loading saves.
    - Fixed MT-32 support.
+
+ Pegasus:
+   - Added support for DVD/GOG.com release.
 
  SAGA:
    - Added support for ITE GOG Mac CD v1.1.

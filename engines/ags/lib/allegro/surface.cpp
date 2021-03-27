@@ -106,13 +106,140 @@ void BITMAP::floodfill(int x, int y, int color) {
 }
 
 const int SCALE_THRESHOLD = 0x100;
-#define IS_TRANSPARENT(R, G, B) ((R) == 255 && (G) == 0 && (B) == 255)
 #define VGA_COLOR_TRANS(x) ((x) * 255 / 63)
 
 void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
-		const Common::Rect &dstRect, bool horizFlip, bool vertFlip,
+		int dstX, int dstY, bool horizFlip, bool vertFlip,
 		bool skipTrans, int srcAlpha, int tintRed, int tintGreen,
 		int tintBlue) {
+	assert(format.bytesPerPixel == 2 || format.bytesPerPixel == 4 ||
+		(format.bytesPerPixel == 1 && srcBitmap->format.bytesPerPixel == 1));
+
+	// Allegro disables draw when the clipping rect has negative width/height.
+	// Common::Rect instead asserts, which we don't want.
+	if (cr <= cl || cb <= ct)
+		return;
+
+	// Figure out the dest area that will be updated
+	Common::Rect dstRect(dstX, dstY, dstX + srcRect.width(), dstY + srcRect.height());
+	Common::Rect destRect = dstRect.findIntersectingRect(
+		Common::Rect(cl, ct, cr, cb));
+	if (destRect.isEmpty())
+		// Area is entirely outside the clipping area, so nothing to draw
+		return;
+
+	// Get source and dest surface. Note that for the destination we create
+	// a temporary sub-surface based on the allowed clipping area
+	const Graphics::ManagedSurface &src = **srcBitmap;
+	Graphics::ManagedSurface &dest = *_owner;
+	Graphics::Surface destArea = dest.getSubArea(destRect);
+
+	// Define scaling and other stuff used by the drawing loops
+	const int xDir = horizFlip ? -1 : 1;
+	bool useTint = (tintRed >= 0 && tintGreen >= 0 && tintBlue >= 0);
+	bool sameFormat = (src.format == format);
+
+	byte rSrc, gSrc, bSrc, aSrc;
+	byte rDest = 0, gDest = 0, bDest = 0, aDest = 0;
+
+	PALETTE palette;
+	if (src.format.bytesPerPixel == 1 && format.bytesPerPixel != 1) {
+		for (int i = 0; i < PAL_SIZE; ++i) {
+			palette[i].r = VGA_COLOR_TRANS(_G(current_palette)[i].r);
+			palette[i].g = VGA_COLOR_TRANS(_G(current_palette)[i].g);
+			palette[i].b = VGA_COLOR_TRANS(_G(current_palette)[i].b);
+		}
+	}
+
+	uint32 transColor = 0, alphaMask = 0xff;
+	if (skipTrans && src.format.bytesPerPixel != 1) {
+		transColor = src.format.ARGBToColor(0, 255, 0, 255);
+		alphaMask = src.format.ARGBToColor(255, 0, 0, 0);
+		alphaMask = ~alphaMask;
+	}
+
+	int xStart = (dstRect.left < destRect.left) ? dstRect.left - destRect.left : 0;
+	int yStart = (dstRect.top < destRect.top) ? dstRect.top - destRect.top : 0;
+
+	for (int destY = yStart, yCtr = 0; yCtr < dstRect.height(); ++destY, ++yCtr) {
+		if (destY < 0 || destY >= destArea.h)
+			continue;
+		byte *destP = (byte *)destArea.getBasePtr(0, destY);
+		const byte *srcP = (const byte *)src.getBasePtr(
+			horizFlip ? srcRect.right - 1 : srcRect.left,
+			vertFlip ? srcRect.bottom - 1 - yCtr :
+			srcRect.top + yCtr);
+
+		// Loop through the pixels of the row
+		for (int destX = xStart, xCtr = 0, xCtrBpp = 0; xCtr < dstRect.width(); ++destX, ++xCtr, xCtrBpp += src.format.bytesPerPixel) {
+			if (destX < 0 || destX >= destArea.w)
+				continue;
+
+			const byte *srcVal = srcP + xDir * xCtrBpp;
+			uint32 srcCol = getColor(srcVal, src.format.bytesPerPixel);
+
+			// Check if this is a transparent color we should skip
+			if (skipTrans && ((srcCol & alphaMask) == transColor))
+				continue;
+
+			byte *destVal = (byte *)&destP[destX * format.bytesPerPixel];
+
+			// When blitting to the same format we can just copy the color
+			if (format.bytesPerPixel == 1) {
+				*destVal = srcCol;
+				continue;
+			} else if (sameFormat && srcAlpha == -1) {
+				if (format.bytesPerPixel == 4)
+					*(uint32 *)destVal = srcCol;
+				else
+					*(uint16 *)destVal = srcCol;
+				continue;
+			}
+
+			// We need the rgb values to do blending and/or convert between formats
+			if (src.format.bytesPerPixel == 1) {
+				const RGB& rgb = palette[srcCol];
+				aSrc = 0xff;
+				rSrc = rgb.r;
+				gSrc = rgb.g;
+				bSrc = rgb.b;
+			} else
+				src.format.colorToARGB(srcCol, aSrc, rSrc, gSrc, bSrc);
+
+			if (srcAlpha == -1) {
+				// This means we don't use blending.
+				aDest = aSrc;
+				rDest = rSrc;
+				gDest = gSrc;
+				bDest = bSrc;
+			} else {
+				if (useTint) {
+					rDest = rSrc;
+					gDest = gSrc;
+					bDest = bSrc;
+					aDest = aSrc;
+					rSrc = tintRed;
+					gSrc = tintGreen;
+					bSrc = tintBlue;
+					aSrc = srcAlpha;
+				} else {
+					// TODO: move this to blendPixel to only do it when needed?
+					format.colorToARGB(getColor(destVal, format.bytesPerPixel), aDest, rDest, gDest, bDest);
+				}
+				blendPixel(aSrc, rSrc, gSrc, bSrc, aDest, rDest, gDest, bDest, srcAlpha);
+			}
+
+			uint32 pixel = format.ARGBToColor(aDest, rDest, gDest, bDest);
+			if (format.bytesPerPixel == 4)
+				*(uint32 *)destVal = pixel;
+			else
+				*(uint16 *)destVal = pixel;
+		}
+	}
+}
+
+void BITMAP::stretchDraw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
+		const Common::Rect &dstRect, bool skipTrans, int srcAlpha) {
 	assert(format.bytesPerPixel == 2 || format.bytesPerPixel == 4 ||
 		(format.bytesPerPixel == 1 && srcBitmap->format.bytesPerPixel == 1));
 
@@ -137,25 +264,25 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 	// Define scaling and other stuff used by the drawing loops
 	const int scaleX = SCALE_THRESHOLD * srcRect.width() / dstRect.width();
 	const int scaleY = SCALE_THRESHOLD * srcRect.height() / dstRect.height();
-	const int xDir = horizFlip ? -1 : 1;
-	bool useTint = (tintRed >= 0 && tintGreen >= 0 && tintBlue >= 0);
+	bool sameFormat = (src.format == format);
 
 	byte rSrc, gSrc, bSrc, aSrc;
 	byte rDest = 0, gDest = 0, bDest = 0, aDest = 0;
-	uint32 pal[PALETTE_COUNT];
 
-	Graphics::PixelFormat srcFormat = src.format;
-	if (srcFormat.bytesPerPixel == 1) {
-		for (int i = 0; i < PALETTE_COUNT; ++i)
-			pal[i] = format.RGBToColor(
-				VGA_COLOR_TRANS(_G(current_palette)[i].r),
-				VGA_COLOR_TRANS(_G(current_palette)[i].g),
-				VGA_COLOR_TRANS(_G(current_palette)[i].b));
-		srcFormat = format;
-		// If we are skipping transparency, color 0 is skipped.
-		// Set it to transparent color to simplify the check below.
-		if (skipTrans)
-			pal[0] = format.RGBToColor(0xff, 0, 0xff);
+	PALETTE palette;
+	if (src.format.bytesPerPixel == 1 && format.bytesPerPixel != 1) {
+		for (int i = 0; i < PAL_SIZE; ++i) {
+			palette[i].r = VGA_COLOR_TRANS(_G(current_palette)[i].r);
+			palette[i].g = VGA_COLOR_TRANS(_G(current_palette)[i].g);
+			palette[i].b = VGA_COLOR_TRANS(_G(current_palette)[i].b);
+		}
+	}
+
+	uint32 transColor = 0, alphaMask = 0xff;
+	if (skipTrans && src.format.bytesPerPixel != 1) {
+		transColor = src.format.ARGBToColor(0, 255, 0, 255);
+		alphaMask = src.format.ARGBToColor(255, 0, 0, 0);
+		alphaMask = ~alphaMask;
 	}
 
 	int xStart = (dstRect.left < destRect.left) ? dstRect.left - destRect.left : 0;
@@ -167,9 +294,7 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 			continue;
 		byte *destP = (byte *)destArea.getBasePtr(0, destY);
 		const byte *srcP = (const byte *)src.getBasePtr(
-			horizFlip ? srcRect.right - 1 : srcRect.left,
-			vertFlip ? srcRect.bottom - 1 - scaleYCtr / SCALE_THRESHOLD :
-			srcRect.top + scaleYCtr / SCALE_THRESHOLD);
+			srcRect.left, srcRect.top + scaleYCtr / SCALE_THRESHOLD);
 
 		// Loop through the pixels of the row
 		for (int destX = xStart, xCtr = 0, scaleXCtr = 0; xCtr < dstRect.width();
@@ -177,18 +302,36 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 			if (destX < 0 || destX >= destArea.w)
 				continue;
 
-			const byte *srcVal = srcP + xDir * (scaleXCtr / SCALE_THRESHOLD * src.format.bytesPerPixel);
+			const byte *srcVal = srcP + scaleXCtr / SCALE_THRESHOLD * src.format.bytesPerPixel;
+			uint32 srcCol = getColor(srcVal, src.format.bytesPerPixel);
+
+			// Check if this is a transparent color we should skip
+			if (skipTrans && ((srcCol & alphaMask) == transColor))
+				continue;
+
 			byte *destVal = (byte *)&destP[destX * format.bytesPerPixel];
 
-			if (src.format.bytesPerPixel == 1 && format.bytesPerPixel == 1) {
-				if (!skipTrans || *srcVal != 0)
-					*destVal = *srcVal;
+			// When blitting to the same format we can just copy the color
+			if (format.bytesPerPixel == 1) {
+				*destVal = srcCol;
+				continue;
+			} else if (sameFormat && srcAlpha == -1) {
+				if (format.bytesPerPixel == 4)
+					*(uint32 *)destVal = srcCol;
+				else
+					*(uint16 *)destVal = srcCol;
 				continue;
 			}
-			srcFormat.colorToARGB(getColor(srcVal, src.format.bytesPerPixel, pal), aSrc, rSrc, gSrc, bSrc);
 
-			if (skipTrans && IS_TRANSPARENT(rSrc, gSrc, bSrc))
-				continue;
+			// We need the rgb values to do blending and/or convert between formats
+			if (src.format.bytesPerPixel == 1) {
+				const RGB& rgb = palette[srcCol];
+				aSrc = 0xff;
+				rSrc = rgb.r;
+				gSrc = rgb.g;
+				bSrc = rgb.b;
+			} else
+				src.format.colorToARGB(srcCol, aSrc, rSrc, gSrc, bSrc);
 
 			if (srcAlpha == -1) {
 				// This means we don't use blending.
@@ -197,19 +340,8 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 				gDest = gSrc;
 				bDest = bSrc;
 			} else {
-				if (useTint) {
-					rDest = rSrc;
-					gDest = gSrc;
-					bDest = bSrc;
-					aDest = aSrc;
-					rSrc = tintRed;
-					gSrc = tintGreen;
-					bSrc = tintBlue;
-					aSrc = srcAlpha;
-				} else {
-					// TODO: move this to blendPixel to only do it when needed?
-					format.colorToARGB(getColor(destVal, format.bytesPerPixel, nullptr), aDest, rDest, gDest, bDest);
-				}
+				// TODO: move this to blendPixel to only do it when needed?
+				format.colorToARGB(getColor(destVal, format.bytesPerPixel), aDest, rDest, gDest, bDest);
 				blendPixel(aSrc, rSrc, gSrc, bSrc, aDest, rDest, gDest, bDest, srcAlpha);
 			}
 
@@ -223,13 +355,6 @@ void BITMAP::draw(const BITMAP *srcBitmap, const Common::Rect &srcRect,
 }
 
 void BITMAP::blendPixel(uint8 aSrc, uint8 rSrc, uint8 gSrc, uint8 bSrc, uint8 &aDest, uint8 &rDest, uint8 &gDest, uint8 &bDest, uint32 alpha) const {
-	if (IS_TRANSPARENT(rDest, gDest, bDest)) {
-		aDest = aSrc;
-		rDest = rSrc;
-		gDest = gSrc;
-		bDest = bSrc;
-		return;
-	}
 	switch(_G(_blender_mode)) {
 	case kSourceAlphaBlender:
 		blendSourceAlpha(aSrc, rSrc, gSrc, bSrc, aDest, rDest, gDest, bDest, alpha);

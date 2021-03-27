@@ -127,6 +127,7 @@ static const char *const selectorNameTable[] = {
 	"has",          // King's Quest 6, GK1
 	"modeless",     // King's Quest 6 CD
 	"message",      // King's Quest 6
+	"forceUpd",     // Police Quest 3
 	"cycler",       // Space Quest 4 / system selector
 	"setCel",       // Space Quest 4, Phant2, GK1
 	"addToPic",     // Space Quest 4
@@ -251,6 +252,7 @@ enum ScriptPatcherSelectors {
 	SELECTOR_has,
 	SELECTOR_modeless,
 	SELECTOR_message,
+	SELECTOR_forceUpd,
 	SELECTOR_cycler,
 	SELECTOR_setCel,
 	SELECTOR_addToPic,
@@ -617,6 +619,52 @@ static const uint16 ecoquest1Sq4CdNarratorLockupPatch[] = {
 	0x30, PATCH_UINT16(0xfffa),         // bnt fffa [ set ticks to 0 if ticks == -1 ]
 	0x63, PATCH_GETORIGINALBYTE(+12),   // pToa modeless
 	0x18,                               // not
+	PATCH_END
+};
+
+// Several SCI Version 1 games use a Timer class that doesn't handle kGetTime
+//  rollover correctly. When Timer:set60ths is called with a tick value that
+//  elapses after kGetTime rolls over from 65535 to 0, the timer instantly cues.
+//  The CD versions of KQ5 and Mixed Up Mother Goose set a timer this way when
+//  playing speech that can't be skipped. As rollover approaches every 18
+//  minutes and 12 seconds, these messages can instantly complete and cause
+//  entire scenes to randomly skip. For example, this can happen in KQ5CD's
+//  Harpy and Hermit cutscenes.
+//
+// We fix this by replacing the Timer's tick calculation with the correct logic
+//  that appears in later versions when set60ths was renamed to setTicks.
+//
+// Applies to: Games that use Timer:set60ths
+// Responsible methods: Timer:doit, SpeakTimer:doit in KQ5CD
+static const uint16 sciSignatureTimerRollover[] = {
+	0x67, SIG_ADDTOOFFSET(+1),       // pTos ticksToDo
+	0x63, SIG_ADDTOOFFSET(+1),       // pToa lastTime
+	0x02,                            // add
+	0x36,                            // push
+	0x76,                            // push0
+	SIG_MAGICDWORD,
+	0x43, 0x42, 0x00,                // callk GetTime 00
+	0x2a,                            // ult? [ ticksToDo + lastTime u< kGetTime ]
+	0x2e, SIG_UINT16(0x0013),        // bt 0013
+	0x67, SIG_ADDTOOFFSET(+1),       // pTos lastTime
+	0x76,                            // push0
+	SIG_ADDTOOFFSET(+16),
+	0x30,                            // bnt [ cue client if acc == true ]
+	SIG_END
+};
+
+static const uint16 sciPatchTimerRollover[] = {
+	0x76,                            // push0
+	0x43, 0x42, 0x00,                // callk GetTime 00
+	0x36,                            // push
+	0x67, PATCH_GETORIGINALBYTE(+1), // pTos ticksToDo
+	0x63, PATCH_GETORIGINALBYTE(+3), // pToa lastTime
+	0x02,                            // add
+	0x04,                            // sub
+	0x36,                            // push
+	0x35, 0x00,                      // ldi 00
+	0x1e,                            // gt? [ kGetTime - (ticksToDo + lastTime) > 0 ]
+	0x33, 0x10,                      // jmp 10 [ cue client if acc == true ]
 	PATCH_END
 };
 
@@ -4918,10 +4966,12 @@ static const uint16 kq5PatchCrispinIntroSignal[] = {
 //          script, description,                                      signature                  patch
 static const SciScriptPatcherEntry kq5Signatures[] = {
 	{  true,     0, "CD: harpy volume change",                     1, kq5SignatureCdHarpyVolume,            kq5PatchCdHarpyVolume },
+	{  true,     0, "timer rollover",                              1, sciSignatureTimerRollover,            sciPatchTimerRollover },
 	{ false,   109, "Crispin intro signal",                        1, kq5SignatureCrispinIntroSignal,       kq5PatchCrispinIntroSignal },
 	{  true,   124, "Multilingual: Ending glitching out",          3, kq5SignatureMultilingualEndingGlitch, kq5PatchMultilingualEndingGlitch },
 	{ false,   124, "Win: GM Music signal checks",                 4, kq5SignatureWinGMSignals,             kq5PatchWinGMSignals },
 	{  true,   200, "CD: witch cage init",                         1, kq5SignatureWitchCageInit,            kq5PatchWitchCageInit },
+	{  true,   973, "timer rollover",                              1, sciSignatureTimerRollover,            sciPatchTimerRollover },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
 
@@ -9540,6 +9590,7 @@ static const SciScriptPatcherEntry mothergoose256Signatures[] = {
 	{  true,     0, "save limit dialog (SCI1.1)",                  1, mothergoose256SignatureSaveLimit,     mothergoose256PatchSaveLimit },
 	{  true,   994, "save limit dialog (SCI1)",                    1, mothergoose256SignatureSaveLimit,     mothergoose256PatchSaveLimit },
 	{  true,    90, "main menu button crash",                      1, mothergoose256SignatureMainMenuCrash, mothergoose256PatchMainMenuCrash },
+	{  true,   999, "timer rollover",                              1, sciSignatureTimerRollover,            sciPatchTimerRollover },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
 
@@ -10596,8 +10647,84 @@ static const SciScriptPatcherEntry phantasmagoria2Signatures[] = {
 // ===========================================================================
 // Pepper's Adventures in Time
 
+// Using items on the jar of cabbage leaves it in a broken state that prevents
+//  feeding it to the goat and completing the game.
+//
+// As the jar progresses through states to become a Leyden jar, its noun and
+//  message (verb) properties change. When a non-Leyden item is used on the jar,
+//  Glass Jar:doVerb tests to see if a message resource exists for the current
+//  noun and incoming verb. If there's no such message then the jar's noun is
+//  set to 30 and its message property is set to 125, a verb that no screens
+//  respond to. The jar can no longer be clicked on anything, but the damage is
+//  limited until the next time the player returns to the inventory screen and
+//  Glass Jar:show recalculates the properties that it should have already had.
+//  This recalculation fails to take into account the initial state so if the
+//  jar has cabbage then it is permanently broken instead of just temporarily.
+//
+// We fix this so that the jar is never placed in a broken state. The existing
+//  code attempts to fall back on message resources for noun 30 which refer the
+//  unfinished Leyden jar. The problem is that it doesn't restore the noun after
+//  displaying the message, which can cause subsequent missing message errors,
+//  and it mangles the message property even though that doesn't affect which
+//  message it's about to display. We rewrite this so that noun 30 is only set
+//  temporarily, and only when the jar is an unfinished Leyden jar, and without
+//  altering the message (verb) property. This also fixes several messages.
+//
+// Applies to: All versions
+// Responsible method: Glass Jar:doVerb
+// Fixes bug: #6232
+static const uint16 pepperSignatureGlassJar[] = {
+	SIG_MAGICDWORD,
+	0x31, 0x08,                      // bnt 08 [ skip if message exists ]
+	0x35, 0x1e,                      // ldi 1e
+	0x65, 0x36,                      // aTop noun [ noun = 30 ]
+	0x35, 0x7d,                      // ldi 7d
+	0x65, 0x26,                      // aTop message [ message = 125 ]
+	0x38, SIG_SELECTOR16(doVerb),    // pushi doVerb
+	0x78,                            // push1
+	0x8f, 0x01,                      // lsp 01
+	0x59, 0x02,                      // &rest 02
+	0x57, 0x87, 0x06,                // super TWInvItem 06 [ super doVerb: param1 &rest ]
+	0x39, 0x04,                      // pushi 04
+	0x8f, 0x01,                      // lsp 01
+	0x39, 0x32,                      // pushi 32
+	0x39, 0x33,                      // pushi 33
+	0x39, 0x2f,                      // pushi 2f
+	0x46, SIG_UINT16(0x03e7),        // calle proc999_5 [ OneOf param1 50 51 47, always false ]
+	      SIG_UINT16(0x0005), 0x08,
+	0x31, 0x09,                      // bnt 09 [ branch always taken ]
+	SIG_END
+};
+
+static const uint16 pepperPatchGlassJar[] = {
+	0x67, 0x36,                      // pTos noun [ save noun ]
+	0x31, 0x16,                      // bnt 16 [ skip if message exists ]
+	0x3c,                            // dup
+	0x35, 0x1a,                      // ldi 1a
+	0x1a,                            // eq?
+	0x2f, 0x10,                      // bt 10 [ skip if noun == 26 (cabbage) ]
+	0x3c,                            // dup
+	0x35, 0x1d,                      // ldi 1d
+	0x1a,                            // eq?
+	0x2f, 0x0a,                      // bt 0a [ skip if noun == 29 (Leyden jar) ]
+	0x3c,                            // dup
+	0x35, 0x1b,                      // ldi 1b
+	0x1a,                            // eq?
+	0x2f, 0x04,                      // bt 04 [ skip if noun == 27 (charged Leyden jar) ]
+	0x35, 0x1e,                      // ldi 1e
+	0x65, 0x36,                      // aTop noun [ noun = 30 (unfinished Leyden jar) ]
+	0x38, PATCH_SELECTOR16(doVerb),  // pushi doVerb
+	0x76,                            // push0
+	0x59, 0x01,                      // &rest 01
+	0x57, 0x87, 0x04,                // super TWInvItem 04 [ super doVerb: &rest ]
+	0x69, 0x36,                      // sTop noun [ restore noun ]
+	0x33, 0x09,                      // jmp 09
+	PATCH_END
+};
+
 //          script, description,                                         signature                            patch
 static const SciScriptPatcherEntry pepperSignatures[] = {
+	{  true,   894, "glass jar fix",                                  1, pepperSignatureGlassJar,             pepperPatchGlassJar },
 	{  true,   928, "Narrator lockup fix",                            1, sciNarratorLockupSignature,          sciNarratorLockupPatch },
 	SCI_SIGNATUREENTRY_TERMINATOR
 };
@@ -10973,8 +11100,41 @@ static const uint16 pq3PatchHouseFireRepeats[] = {
 	PATCH_END
 };
 
+// When driving at high speeds, road signs don't always update. The scripts
+//  implicitly depend on the sign being already hidden before showing it, as
+//  they don't redraw the view. roadSignScript sets a three second timer before
+//  hiding a sign, so this usually works, except at high speeds. We fix this by
+//  calling View:forceUpd to set kSignalForceUpdate when showing each sign.
+//
+// Applies to: All versions
+// Responsible method: roadSignScript:changeState(0)
+// Fixes bug: #10254
+static const uint16 pq3SignatureRoadSignUpdates[] = {
+	0x3c,                                // dup
+	0x35, 0x00,                          // ldi 00
+	0x1a,                                // eq?
+	0x30, SIG_UINT16(0x0007),            // bnt 0007 [ state 1 ]
+	SIG_MAGICDWORD,
+	0x63, 0x1a,                          // pToa register
+	0x65, 0x12,                          // aTop seconds [ seconds = register ]
+	0x32, SIG_UINT16(0x0019),            // jmp 0019
+	SIG_END
+};
+
+static const uint16 pq3PatchRoadSignUpdates[] = {
+	0x2f, 0x0c,                          // bt 0c [ state 1 ]
+	0x63, 0x1a,                          // pToa register
+	0x65, 0x12,                          // aTop seconds [ seconds = register ]
+	0x38, PATCH_SELECTOR16(forceUpd),    // pushi forceUpd
+	0x76,                                // push0
+	0x63, 0x08,                          // pToa client
+	0x4a, 0x04,                          // send 04 [ client forceUpd: ]
+	PATCH_END
+};
+
 //          script, description,                                 signature                     patch
 static const SciScriptPatcherEntry pq3Signatures[] = {
+	{  true, 25, "fix road sign updates",                     1, pq3SignatureRoadSignUpdates,  pq3PatchRoadSignUpdates },
 	{  true, 33, "prevent house fire repeating",              1, pq3SignatureHouseFireRepeats, pq3PatchHouseFireRepeats },
 	{  true, 36, "give locket missing points",                1, pq3SignatureGiveLocketPoints, pq3PatchGiveLocketPoints },
 	{  true, 36, "doctor mouth speed",                        1, pq3SignatureDoctorMouthSpeed, pq3PatchDoctorMouthSpeed },

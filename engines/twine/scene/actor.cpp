@@ -45,15 +45,11 @@ Actor::Actor(TwinEEngine *engine) : _engine(engine) {
 
 Actor::~Actor() {
 	_engine->_scene->getActor(OWN_ACTOR_SCENE_INDEX)->entityDataPtr = nullptr;
-	free(heroEntityNORMAL);
-	free(heroEntityATHLETIC);
-	free(heroEntityAGGRESSIVE);
-	free(heroEntityDISCRETE);
-	free(heroEntityPROTOPACK);
-
-	for (size_t i = 0; i < ARRAYSIZE(bodyTable); ++i) {
-		free(bodyTable[i]);
-	}
+	free(_heroEntityNORMAL);
+	free(_heroEntityATHLETIC);
+	free(_heroEntityAGGRESSIVE);
+	free(_heroEntityDISCRETE);
+	free(_heroEntityPROTOPACK);
 }
 
 void Actor::restartHeroScene() {
@@ -97,11 +93,11 @@ int32 Actor::loadBehaviourEntity(ActorStruct *sceneHero, uint8 **ptr, int16 &bod
 
 void Actor::loadHeroEntities() {
 	ActorStruct *sceneHero = _engine->_scene->sceneHero;
-	heroEntityATHLETICSize = loadBehaviourEntity(sceneHero, &heroEntityATHLETIC, heroAnimIdxATHLETIC, FILE3DHQR_HEROATHLETIC);
-	heroEntityAGGRESSIVESize = loadBehaviourEntity(sceneHero, &heroEntityAGGRESSIVE, heroAnimIdxAGGRESSIVE, FILE3DHQR_HEROAGGRESSIVE);
-	heroEntityDISCRETESize = loadBehaviourEntity(sceneHero, &heroEntityDISCRETE, heroAnimIdxDISCRETE, FILE3DHQR_HERODISCRETE);
-	heroEntityPROTOPACKSize = loadBehaviourEntity(sceneHero, &heroEntityPROTOPACK, heroAnimIdxPROTOPACK, FILE3DHQR_HEROPROTOPACK);
-	heroEntityNORMALSize = loadBehaviourEntity(sceneHero, &heroEntityNORMAL, heroAnimIdxNORMAL, FILE3DHQR_HERONORMAL);
+	_heroEntityATHLETICSize = loadBehaviourEntity(sceneHero, &_heroEntityATHLETIC, heroAnimIdxATHLETIC, FILE3DHQR_HEROATHLETIC);
+	_heroEntityAGGRESSIVESize = loadBehaviourEntity(sceneHero, &_heroEntityAGGRESSIVE, heroAnimIdxAGGRESSIVE, FILE3DHQR_HEROAGGRESSIVE);
+	_heroEntityDISCRETESize = loadBehaviourEntity(sceneHero, &_heroEntityDISCRETE, heroAnimIdxDISCRETE, FILE3DHQR_HERODISCRETE);
+	_heroEntityPROTOPACKSize = loadBehaviourEntity(sceneHero, &_heroEntityPROTOPACK, heroAnimIdxPROTOPACK, FILE3DHQR_HEROPROTOPACK);
+	_heroEntityNORMALSize = loadBehaviourEntity(sceneHero, &_heroEntityNORMAL, heroAnimIdxNORMAL, FILE3DHQR_HERONORMAL);
 
 	sceneHero->animExtraPtr = _engine->_animations->currentActorAnimExtraPtr;
 }
@@ -111,28 +107,28 @@ void Actor::setBehaviour(HeroBehaviourType behaviour) {
 	switch (behaviour) {
 	case HeroBehaviourType::kNormal:
 		heroBehaviour = behaviour;
-		sceneHero->entityDataPtr = heroEntityNORMAL;
-		sceneHero->entityDataSize = heroEntityNORMALSize;
+		sceneHero->entityDataPtr = _heroEntityNORMAL;
+		sceneHero->entityDataSize = _heroEntityNORMALSize;
 		break;
 	case HeroBehaviourType::kAthletic:
 		heroBehaviour = behaviour;
-		sceneHero->entityDataPtr = heroEntityATHLETIC;
-		sceneHero->entityDataSize = heroEntityATHLETICSize;
+		sceneHero->entityDataPtr = _heroEntityATHLETIC;
+		sceneHero->entityDataSize = _heroEntityATHLETICSize;
 		break;
 	case HeroBehaviourType::kAggressive:
 		heroBehaviour = behaviour;
-		sceneHero->entityDataPtr = heroEntityAGGRESSIVE;
-		sceneHero->entityDataSize = heroEntityAGGRESSIVESize;
+		sceneHero->entityDataPtr = _heroEntityAGGRESSIVE;
+		sceneHero->entityDataSize = _heroEntityAGGRESSIVESize;
 		break;
 	case HeroBehaviourType::kDiscrete:
 		heroBehaviour = behaviour;
-		sceneHero->entityDataPtr = heroEntityDISCRETE;
-		sceneHero->entityDataSize = heroEntityDISCRETESize;
+		sceneHero->entityDataPtr = _heroEntityDISCRETE;
+		sceneHero->entityDataSize = _heroEntityDISCRETESize;
 		break;
 	case HeroBehaviourType::kProtoPack:
 		heroBehaviour = behaviour;
-		sceneHero->entityDataPtr = heroEntityPROTOPACK;
-		sceneHero->entityDataSize = heroEntityPROTOPACKSize;
+		sceneHero->entityDataPtr = _heroEntityPROTOPACK;
+		sceneHero->entityDataSize = _heroEntityPROTOPACKSize;
 		break;
 	};
 
@@ -144,9 +140,9 @@ void Actor::setBehaviour(HeroBehaviourType behaviour) {
 	initModelActor(bodyIdx, OWN_ACTOR_SCENE_INDEX);
 
 	sceneHero->anim = AnimationTypes::kAnimNone;
-	sceneHero->animType = kAnimationTypeLoop;
+	sceneHero->animType = AnimType::kAnimationTypeLoop;
 
-	_engine->_animations->initAnim(AnimationTypes::kStanding, kAnimationTypeLoop, AnimationTypes::kAnimInvalid, 0);
+	_engine->_animations->initAnim(AnimationTypes::kStanding, AnimType::kAnimationTypeLoop, AnimationTypes::kAnimInvalid, 0);
 }
 
 void Actor::initSpriteActor(int32 actorIdx) {
@@ -155,22 +151,16 @@ void Actor::initSpriteActor(int32 actorIdx) {
 	if (localActor->staticFlags.bIsSpriteActor && localActor->sprite != -1 && localActor->entity != localActor->sprite) {
 		const BoundingBox *spritebbox = _engine->_resources->spriteBoundingBox.bbox(localActor->sprite);
 		localActor->entity = localActor->sprite;
-		ZVBox &bbox = localActor->boudingBox;
-		bbox.x.bottomLeft = spritebbox->mins.x;
-		bbox.x.topRight = spritebbox->maxs.x;
-		bbox.y.bottomLeft = spritebbox->mins.y;
-		bbox.y.topRight = spritebbox->maxs.y;
-		bbox.z.bottomLeft = spritebbox->mins.z;
-		bbox.z.topRight = spritebbox->maxs.z;
+		localActor->boudingBox = *spritebbox;
 	}
 }
 
 int32 Actor::getTextIdForBehaviour() const {
-	if (_engine->_actor->heroBehaviour == HeroBehaviourType::kAggressive && _engine->_actor->autoAggressive) {
+	if (heroBehaviour == HeroBehaviourType::kAggressive && autoAggressive) {
 		return TextId::kBehaviourAggressiveAuto;
 	}
 	// the other values are matching the text ids
-	return (int32)_engine->_actor->heroBehaviour;
+	return (int32)heroBehaviour;
 }
 
 // see Animations::getBodyAnimIndex
@@ -196,14 +186,15 @@ int32 Actor::initBody(BodyType bodyIdx, int32 actorIdx, ActorBoundingBox &actorB
 				// TODO: move into resources class
 				int32 index;
 				if (!(bodyIndex & 0x8000)) {
-					index = currentPositionInBodyPtrTab;
-					currentPositionInBodyPtrTab++;
-					bodyTableSize[index] = HQR::getAllocEntry(&bodyTable[index], Resources::HQR_BODY_FILE, bodyIndex & 0xFFFF);
-					if (bodyTableSize[index] == 0) {
-						error("HQR ERROR: Loading body entities");
+					index = _currentPositionInBodyPtrTab;
+					_currentPositionInBodyPtrTab++;
+					_engine->_resources->bodyTableSize[index] = HQR::getAllocEntry(&_engine->_resources->bodyTable[index], Resources::HQR_BODY_FILE, bodyIndex & 0xFFFF);
+					if (_engine->_resources->bodyTableSize[index] == 0) {
+						error("HQR ERROR: Loading body entity for actor %i: %i", actorIdx, (int)bodyIdx);
 					}
-					bodyData[index].loadFromBuffer(bodyTable[index], bodyTableSize[index]);
-					Renderer::prepareIsoModel(bodyTable[index]);
+					if (!_engine->_resources->bodyData[index].loadFromBuffer(_engine->_resources->bodyTable[index], _engine->_resources->bodyTableSize[index])) {
+						error("HQR ERROR: Parsing body entity for actor %i: %i", actorIdx, (int)bodyIdx);
+					}
 					stream.seek(stream.pos() - sizeof(uint16));
 					stream.writeUint16LE(index + 0x8000);
 				} else {
@@ -219,13 +210,12 @@ int32 Actor::initBody(BodyType bodyIdx, int32 actorIdx, ActorBoundingBox &actorB
 					return index;
 				}
 
-				actorBoundingBox.bottomLeftX = stream.readUint16LE();
-				actorBoundingBox.bottomLeftY = stream.readUint16LE();
-				actorBoundingBox.bottomLeftZ = stream.readUint16LE();
-
-				actorBoundingBox.topRightX = stream.readUint16LE();
-				actorBoundingBox.topRightY = stream.readUint16LE();
-				actorBoundingBox.topRightZ = stream.readUint16LE();
+				actorBoundingBox.bbox.mins.x = stream.readSint16LE();
+				actorBoundingBox.bbox.mins.y = stream.readSint16LE();
+				actorBoundingBox.bbox.mins.z = stream.readSint16LE();
+				actorBoundingBox.bbox.maxs.x = stream.readSint16LE();
+				actorBoundingBox.bbox.maxs.y = stream.readSint16LE();
+				actorBoundingBox.bbox.maxs.z = stream.readSint16LE();
 
 				return index;
 			}
@@ -252,13 +242,9 @@ void Actor::initModelActor(BodyType bodyIdx, int16 actorIdx) {
 		localActor->body = BodyType::btNone;
 		localActor->entity = -1;
 
-		ZVBox &bbox = localActor->boudingBox;
-		bbox.x.bottomLeft = 0;
-		bbox.x.topRight = 0;
-		bbox.y.bottomLeft = 0;
-		bbox.y.topRight = 0;
-		bbox.z.bottomLeft = 0;
-		bbox.z.topRight = 0;
+		BoundingBox &bbox = localActor->boudingBox;
+		bbox.mins = IVec3();
+		bbox.maxs = IVec3();
 		debug("Failed to initialize body %i for actor %i", (int)bodyIdx, actorIdx);
 		return;
 	}
@@ -271,22 +257,22 @@ void Actor::initModelActor(BodyType bodyIdx, int16 actorIdx) {
 	localActor->body = bodyIdx;
 
 	if (actorBoundingBox.hasBoundingBox) {
-		ZVBox &bbox = localActor->boudingBox;
-		bbox.x.bottomLeft = actorBoundingBox.bottomLeftX;
-		bbox.x.topRight = actorBoundingBox.topRightX;
-		bbox.y.bottomLeft = actorBoundingBox.bottomLeftY;
-		bbox.y.topRight = actorBoundingBox.topRightY;
-		bbox.z.bottomLeft = actorBoundingBox.bottomLeftZ;
-		bbox.z.topRight = actorBoundingBox.topRightZ;
+		BoundingBox &bbox = localActor->boudingBox;
+		bbox.mins.x = actorBoundingBox.bbox.mins.x;
+		bbox.maxs.x = actorBoundingBox.bbox.maxs.x;
+		bbox.mins.y = actorBoundingBox.bbox.mins.y;
+		bbox.maxs.y = actorBoundingBox.bbox.maxs.y;
+		bbox.mins.z = actorBoundingBox.bbox.mins.z;
+		bbox.maxs.z = actorBoundingBox.bbox.maxs.z;
 	} else {
-		ZVBox &bbox = localActor->boudingBox;
-		const BodyData &bd = bodyData[localActor->entity];
-		bbox.y.bottomLeft = bd.minsy;
-		bbox.y.topRight = bd.maxsy;
+		BoundingBox &bbox = localActor->boudingBox;
+		const BodyData &bd = _engine->_resources->bodyData[localActor->entity];
+		bbox.mins.y = bd.bbox.mins.y;
+		bbox.maxs.y = bd.bbox.maxs.y;
 
 		int32 result = 0;
-		const int32 distX = bd.maxsx - bd.minsx;
-		const int32 distZ = bd.maxsz - bd.minsz;
+		const int32 distX = bd.bbox.maxs.x - bd.bbox.mins.x;
+		const int32 distZ = bd.bbox.maxs.z - bd.bbox.mins.z;
 		if (localActor->staticFlags.bUseMiniZv) {
 			// take smaller for bound
 			result = MIN(distX, distZ);
@@ -300,10 +286,10 @@ void Actor::initModelActor(BodyType bodyIdx, int16 actorIdx) {
 			result >>= 2;
 		}
 
-		bbox.x.bottomLeft = -result;
-		bbox.x.topRight = result;
-		bbox.z.bottomLeft = -result;
-		bbox.z.topRight = result;
+		bbox.mins.x = -result;
+		bbox.maxs.x = result;
+		bbox.mins.z = -result;
+		bbox.maxs.z = result;
 	}
 }
 
@@ -331,10 +317,10 @@ void Actor::initActor(int16 actorIdx) {
 		initModelActor(actor->body, actorIdx);
 
 		actor->previousAnimIdx = -1;
-		actor->animType = kAnimationTypeLoop;
+		actor->animType = AnimType::kAnimationTypeLoop;
 
 		if (actor->entity != -1) {
-			_engine->_animations->initAnim(actor->anim, kAnimationTypeLoop, AnimationTypes::kAnimInvalid, actorIdx);
+			_engine->_animations->initAnim(actor->anim, AnimType::kAnimationTypeLoop, AnimationTypes::kAnimInvalid, actorIdx);
 		}
 
 		_engine->_movements->setActorAngleSafe(actor->angle, actor->angle, ANGLE_0, &actor->move);
@@ -355,13 +341,9 @@ void Actor::resetActor(int16 actorIdx) {
 	actor->pos.y = -1;
 	actor->pos.z = 0;
 
-	ZVBox &bbox = actor->boudingBox;
-	bbox.x.bottomLeft = 0;
-	bbox.x.topRight = 0;
-	bbox.y.bottomLeft = 0;
-	bbox.y.topRight = 0;
-	bbox.z.bottomLeft = 0;
-	bbox.z.topRight = 0;
+	BoundingBox &bbox = actor->boudingBox;
+	bbox.mins = IVec3();
+	bbox.maxs = IVec3();
 
 	actor->angle = 0;
 	actor->speed = 40;
@@ -390,7 +372,7 @@ void Actor::resetActor(int16 actorIdx) {
 	actor->lastPos.z = 0;
 	actor->entity = -1;
 	actor->previousAnimIdx = -1;
-	actor->animType = kAnimationTypeLoop;
+	actor->animType = AnimType::kAnimationTypeLoop;
 	actor->animPosition = 0;
 
 	_engine->_movements->setActorAngleSafe(ANGLE_0, ANGLE_0, ANGLE_0, &actor->move);
@@ -421,9 +403,9 @@ void Actor::hitActor(int32 actorIdx, int32 actorIdxAttacked, int32 strengthOfHit
 			}
 
 			if (_engine->getRandomNumber() & 1) {
-				_engine->_animations->initAnim(AnimationTypes::kHit2, kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
+				_engine->_animations->initAnim(AnimationTypes::kHit2, AnimType::kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
 			} else {
-				_engine->_animations->initAnim(AnimationTypes::kBigHit, kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
+				_engine->_animations->initAnim(AnimationTypes::kBigHit, AnimType::kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
 			}
 		}
 
@@ -438,7 +420,7 @@ void Actor::hitActor(int32 actorIdx, int32 actorIdxAttacked, int32 strengthOfHit
 			actor->life = 0;
 		}
 	} else {
-		_engine->_animations->initAnim(AnimationTypes::kHit, kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
+		_engine->_animations->initAnim(AnimationTypes::kHit, AnimType::kAnimationType_3, AnimationTypes::kAnimInvalid, actorIdxAttacked);
 	}
 }
 
@@ -467,13 +449,13 @@ void Actor::processActorExtraBonus(int32 actorIdx) { // GiveExtraBonus
 	} else {
 		ActorStruct *sceneHero = _engine->_scene->sceneHero;
 		const int32 angle = _engine->_movements->getAngleAndSetTargetActorDistance(actor->pos, sceneHero->pos);
-		_engine->_extra->addExtraBonus(actor->pos.x, actor->pos.y + actor->boudingBox.y.topRight, actor->pos.z, ANGLE_70, angle, bonusSprite, actor->bonusAmount);
-		_engine->_sound->playSample(Samples::ItemPopup, 1, actor->pos.x, actor->pos.y + actor->boudingBox.y.topRight, actor->pos.z, actorIdx);
+		_engine->_extra->addExtraBonus(actor->pos.x, actor->pos.y + actor->boudingBox.maxs.y, actor->pos.z, ANGLE_70, angle, bonusSprite, actor->bonusAmount);
+		_engine->_sound->playSample(Samples::ItemPopup, 1, actor->pos.x, actor->pos.y + actor->boudingBox.maxs.y, actor->pos.z, actorIdx);
 	}
 }
 
 void Actor::clearBodyTable() {
-	currentPositionInBodyPtrTab = 0;
+	_currentPositionInBodyPtrTab = 0;
 }
 
 ActorStruct::~ActorStruct() {

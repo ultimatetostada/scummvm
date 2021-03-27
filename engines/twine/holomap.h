@@ -45,31 +45,12 @@ private:
 	bool isTriangleVisible(const Vertex *vertices) const;
 
 	struct Location {
-		// angles
-		uint16 x = 0;
-		uint16 y = 0;
-		uint16 z = 0;
+		IVec3 angle;
 		uint16 textIndex = 0;
 		char name[30] = "";
 	};
 
-	enum HolomapVehicle {
-		FerryBoat = 31,
-		Motorbike = 33,
-		Car = 35,
-		FishingBoat = 37,
-		Catamaran = 39,
-		Hovercraft = 41,
-		Dino = 43,
-		ArmyBoat = 45,
-		HamalayiTransporter = 47
-	};
-	struct HolomapSurface {
-		int16 x = 0;
-		int16 y = 0;
-		int16 z = 0;
-	};
-	HolomapSurface _holomapSurface[561];
+	IVec3 _holomapSurface[561];
 
 	// original game size: 2244 (lba1)
 	struct HolomapSort {
@@ -87,48 +68,16 @@ private:
 	HolomapProjectedPos _projectedSurfacePositions[561];
 	int _projectedSurfaceIndex = 0;
 
-	struct TrajectoryData {
-		int16 locationIdx = -1;
-		int16 trajLocationIdx = -1;
-		int16 vehicleIdx = -1;
-		int16 x = 0;
-		int16 y = 0;
-		int16 z = 0;
-		int16 numAnimFrames = 0;
-		struct TrajectoryPos {
-			int16 x = 0;
-			int16 y = 0;
-		};
-		TrajectoryPos positions[512];
-
-		bool isValid() const {
-			return locationIdx != -1;
-		}
-
-		/**
-		 * The HQR index of the vehicle model for the holomap
-		 * @note Multiplied by 2 because the model index is always followed by the corresponding animation index for that model
-		 */
-		int32 getModel() const {
-			return 2 * vehicleIdx + HolomapVehicle::FerryBoat;
-		}
-
-		int32 getAnimation() const {
-			return getModel() + 1;
-		}
-	};
-
 	int32 _numLocations = 0;
 	Location _locations[NUM_LOCATIONS];
 
-	int32 holomapPaletteIndex = 0;
-	uint8 paletteHolomap[NUMOFCOLORS * 3]{0};
+	int32 _holomapPaletteIndex = 0;
+	uint8 _paletteHolomap[NUMOFCOLORS * 3]{0};
 
 	void drawHolomapText(int32 centerx, int32 top, const char *title);
 	int32 getNextHolomapLocation(int32 currentLocation, int32 dir) const;
 
 	void renderLocations(int xRot, int yRot, int zRot, bool lower);
-	TrajectoryData loadTrajectoryData(int32 trajectoryIdx);
 
 	void renderHolomapModel(const uint8 *bodyPtr, int32 x, int32 y, int32 zPos);
 

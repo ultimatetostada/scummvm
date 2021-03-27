@@ -86,7 +86,10 @@ String  GetPathInASCII(const String &path);
 String  GetCmdLinePathInASCII(const char *arg, int arg_index);
 
 inline String get_filename(const String &pathAndName) {
-	return Common::FSNode(pathAndName).getName();
+	size_t p = pathAndName.FindCharReverse('/');
+	if (p != String::npos)
+		return String(pathAndName.GetNullableCStr() + p + 1);
+	return pathAndName;
 }
 
 } // namespace Path

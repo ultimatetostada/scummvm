@@ -28,6 +28,7 @@
 #include "twine/audio/sound.h"
 #include "twine/menu/interface.h"
 #include "twine/parser/anim.h"
+#include "twine/parser/holomap.h"
 #include "twine/renderer/redraw.h"
 #include "twine/renderer/renderer.h"
 #include "twine/renderer/screens.h"
@@ -63,9 +64,9 @@ bool Holomap::loadLocations() {
 
 	_engine->_text->initTextBank(TextBankId::Inventory_Intro_and_Holomap);
 	for (int32 i = 0; i < _numLocations; i++) {
-		_locations[i].x = ClampAngle(stream.readSint16LE());
-		_locations[i].y = ClampAngle(stream.readSint16LE());
-		_locations[i].z = ClampAngle(stream.readSint16LE());
+		_locations[i].angle.x = ClampAngle(stream.readSint16LE());
+		_locations[i].angle.y = ClampAngle(stream.readSint16LE());
+		_locations[i].angle.z = ClampAngle(stream.readSint16LE());
 		_locations[i].textIndex = stream.readUint16LE();
 
 		if (_engine->_text->getMenuText(_locations[i].textIndex, _locations[i].name, sizeof(_locations[i].name))) {
@@ -96,25 +97,25 @@ void Holomap::loadHolomapGFX() {
 
 	int32 j = 576;
 	for (int32 i = 0; i < 96; i += 3, j += 3) {
-		paletteHolomap[i + 0] = _engine->_screens->palette[j + 0];
-		paletteHolomap[i + 1] = _engine->_screens->palette[j + 1];
-		paletteHolomap[i + 2] = _engine->_screens->palette[j + 2];
+		_paletteHolomap[i + 0] = _engine->_screens->palette[j + 0];
+		_paletteHolomap[i + 1] = _engine->_screens->palette[j + 1];
+		_paletteHolomap[i + 2] = _engine->_screens->palette[j + 2];
 	}
 
 	j = 576;
 	for (int32 i = 96; i < 189; i += 3, j += 3) {
-		paletteHolomap[i + 0] = _engine->_screens->palette[j + 0];
-		paletteHolomap[i + 1] = _engine->_screens->palette[j + 1];
-		paletteHolomap[i + 2] = _engine->_screens->palette[j + 2];
+		_paletteHolomap[i + 0] = _engine->_screens->palette[j + 0];
+		_paletteHolomap[i + 1] = _engine->_screens->palette[j + 1];
+		_paletteHolomap[i + 2] = _engine->_screens->palette[j + 2];
 	}
 
 	prepareHolomapProjectedPositions();
 	prepareHolomapSurface();
-	holomapPaletteIndex = 0;
+	_holomapPaletteIndex = 0;
 }
 
 static int sortHolomapSurfaceCoordsByDepth(const void *a1, const void *a2) {
-	return *(const int16 *)a1 - *(const int16 *)a2;
+	return (int)*(const int16 *)a1 - (int)*(const int16 *)a2;
 }
 
 // verified with disassembly
@@ -126,7 +127,7 @@ void Holomap::prepareHolomapSurface() {
 		int rotation = 0;
 		for (int i = 0; i <= ANGLE_11_25; ++i, rotation += ANGLE_11_25) {
 			const int32 rotX = stream.readByte();
-			const Vec3& rotVec = _engine->_renderer->getHolomapRotation(rotX, angle, rotation);
+			const IVec3& rotVec = _engine->_renderer->getHolomapRotation(rotX, angle, rotation);
 			_holomapSurface[holomapSurfaceArrayIdx].x = rotVec.x;
 			_holomapSurface[holomapSurfaceArrayIdx].y = rotVec.y;
 			_holomapSurface[holomapSurfaceArrayIdx].z = rotVec.z;
@@ -166,11 +167,10 @@ void Holomap::prepareHolomapPolygons() {
 	int holomapSortArrayIdx = 0;
 	int holomapSurfaceArrayIdx = 0;
 	_projectedSurfaceIndex = 0;
-	_engine->_renderer->setBaseRotation(0, 0, 0);
 	for (int32 angle = -ANGLE_90; angle <= ANGLE_90; angle += ANGLE_11_25) {
 		int rotation = 0;
 		for (int32 stepWidth = 0; stepWidth < ANGLE_11_25; ++stepWidth) {
-			HolomapSurface* vec = &_holomapSurface[holomapSurfaceArrayIdx++];
+			IVec3* vec = &_holomapSurface[holomapSurfaceArrayIdx++];
 			_engine->_renderer->getBaseRotationPosition(vec->x, vec->y, vec->z);
 			if (angle != ANGLE_90) {
 				_holomapSort[holomapSortArrayIdx].z = _engine->_renderer->destPos.z;
@@ -183,7 +183,7 @@ void Holomap::prepareHolomapPolygons() {
 			rotation += ANGLE_11_25;
 			++_projectedSurfaceIndex;
 		}
-		HolomapSurface* vec = &_holomapSurface[holomapSurfaceArrayIdx++];
+		IVec3* vec = &_holomapSurface[holomapSurfaceArrayIdx++];
 		_engine->_renderer->getBaseRotationPosition(vec->x, vec->y, vec->z);
 		_engine->_renderer->projectXYPositionOnScreen(_engine->_renderer->destPos);
 		_projectedSurfacePositions[_projectedSurfaceIndex].x = _engine->_renderer->projPos.x;
@@ -267,37 +267,11 @@ void Holomap::renderHolomapModel(const uint8 *bodyPtr, int32 x, int32 y, int32 z
 	_engine->_renderer->renderIsoModel(_engine->_renderer->destPos.x, _engine->_renderer->destPos.y, _engine->_renderer->destPos.z, x, y, 0, bodyPtr);
 }
 
-Holomap::TrajectoryData Holomap::loadTrajectoryData(int32 trajectoryIdx) {
-	Common::MemoryReadStream stream(_engine->_resources->holomapPointAnimPtr, _engine->_resources->holomapPointAnimSize);
-	for (int32 trajIdx = 0; trajIdx < trajectoryIdx; ++trajIdx) {
-		if (stream.eos() || stream.err()) {
-			return TrajectoryData();
-		}
-		stream.skip(12);
-		const int16 animVal = stream.readSint16LE();
-		stream.skip(4 * animVal);
-	}
-	TrajectoryData data;
-	data.locationIdx = stream.readSint16LE();
-	data.trajLocationIdx = stream.readSint16LE();
-	data.vehicleIdx = stream.readSint16LE();
-	data.x = stream.readSint16LE();
-	data.y = stream.readSint16LE();
-	data.z = stream.readSint16LE();
-	data.numAnimFrames = stream.readSint16LE();
-	assert(data.numAnimFrames < ARRAYSIZE(data.positions));
-	for (int32 i = 0; i < data.numAnimFrames; ++i) {
-		data.positions[i].x = stream.readSint16LE();
-		data.positions[i].y = stream.readSint16LE();
-	}
-	return data;
-}
-
 void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 	debug("Draw trajectory index %i", trajectoryIndex);
 
-	const Holomap::TrajectoryData &data = loadTrajectoryData(trajectoryIndex);
-	if (!data.isValid()) {
+	const Trajectory *data = _engine->_resources->getTrajectory(trajectoryIndex);
+	if (data == nullptr) {
 		warning("Failed to load trajectory data for index %i", trajectoryIndex);
 		return;
 	}
@@ -310,23 +284,20 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 	loadHolomapGFX();
 	ScopedEngineFreeze timeFreeze(_engine);
 	_engine->_renderer->setCameraPosition(400, 240, 128, 1024, 1024);
-	_engine->_renderer->setCameraAngle(0, 0, 0, data.x, data.y, data.z, 5300);
+	_engine->_renderer->setCameraAngle(0, 0, 0, data->pos.x, data->pos.y, data->pos.z, 5300);
 
 	renderHolomapSurfacePolygons();
 
-	const Location &loc = _locations[data.locationIdx];
-	renderHolomapModel(_engine->_resources->holomapPointModelPtr, loc.x, loc.y, 0);
+	const Location &loc = _locations[data->locationIdx];
+	renderHolomapModel(_engine->_resources->holomapPointModelPtr, loc.angle.x, loc.angle.y, 0);
 
 	_engine->flip();
 	ActorMoveStruct move;
 	AnimTimerDataStruct animTimerData;
-	uint8 *animPtr = nullptr;
-	const int32 animSize = HQR::getAllocEntry(&animPtr, Resources::HQR_RESS_FILE, data.getAnimation());
 	AnimData animData;
-	animData.loadFromBuffer(animPtr, animSize);
+	animData.loadFromHQR(Resources::HQR_RESS_FILE, data->getAnimation());
 	uint8 *modelPtr = nullptr;
-	HQR::getAllocEntry(&modelPtr, Resources::HQR_RESS_FILE, data.getModel());
-	Renderer::prepareIsoModel(modelPtr);
+	HQR::getAllocEntry(&modelPtr, Resources::HQR_RESS_FILE, data->getModel());
 	uint frameNumber = 0;
 	int32 frameTime = _engine->lbaTime;
 	int16 trajAnimFrameIdx = 0;
@@ -344,11 +315,11 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 		if (!fadeInPalette && local18 < _engine->lbaTime) {
 			//const Common::Rect rect(170, 50, 470, 330);
 			//_engine->_interface->setClip(rect);
-			_engine->setPalette(192, 32, &paletteHolomap[3 * holomapPaletteIndex++]);
+			_engine->setPalette(192, 32, &_paletteHolomap[3 * _holomapPaletteIndex++]);
 			//_engine->copyBlockPhys(rect);
 			//_engine->_interface->resetClip();
-			if (holomapPaletteIndex == 32) {
-				holomapPaletteIndex = 0;
+			if (_holomapPaletteIndex == 32) {
+				_holomapPaletteIndex = 0;
 			}
 			local18 = _engine->lbaTime + 3;
 		}
@@ -358,7 +329,7 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 			_engine->_movements->setActorAngleSafe(ANGLE_0, -ANGLE_90, 500, &move);
 		}
 
-		if (_engine->_animations->setModelAnimation(frameNumber, animData, animPtr, modelPtr, &animTimerData)) {
+		if (_engine->_animations->setModelAnimation(frameNumber, animData, modelPtr, &animTimerData)) {
 			frameNumber++;
 			if (frameNumber >= animData.getNumKeyframes()) {
 				frameNumber = animData.getLoopFrame();
@@ -372,21 +343,21 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 		_engine->_renderer->renderIsoModel(0, 0, 0, 0, newAngle, 0, modelPtr);
 		_engine->copyBlockPhys(rect);
 		_engine->_renderer->setCameraPosition(400, 240, 128, 1024, 1024);
-		_engine->_renderer->setCameraAngle(0, 0, 0, data.x, data.y, data.z, 5300);
-		_engine->_renderer->setLightVector(data.x, data.y, 0);
+		_engine->_renderer->setCameraAngle(0, 0, 0, data->pos.x, data->pos.y, data->pos.z, 5300);
+		_engine->_renderer->setLightVector(data->pos.x, data->pos.y, 0);
 		if (frameTime + 40 <= _engine->lbaTime) {
 			frameTime = _engine->lbaTime;
 			int32 modelX;
 			int32 modelY;
-			if (trajAnimFrameIdx < data.numAnimFrames) {
-				modelX = data.positions[trajAnimFrameIdx].x;
-				modelY = data.positions[trajAnimFrameIdx].y;
+			if (trajAnimFrameIdx < data->numAnimFrames) {
+				modelX = data->positions[trajAnimFrameIdx].x;
+				modelY = data->positions[trajAnimFrameIdx].y;
 			} else {
-				if (data.numAnimFrames < trajAnimFrameIdx) {
+				if (data->numAnimFrames < trajAnimFrameIdx) {
 					break;
 				}
-				modelX = _locations[data.trajLocationIdx].x;
-				modelY = _locations[data.trajLocationIdx].y;
+				modelX = _locations[data->trajLocationIdx].angle.x;
+				modelY = _locations[data->trajLocationIdx].angle.y;
 			}
 			renderHolomapModel(_engine->_resources->holomapPointModelPtr, modelX, modelY, 0);
 			++trajAnimFrameIdx;
@@ -406,7 +377,6 @@ void Holomap::drawHolomapTrajectory(int32 trajectoryIndex) {
 
 	_engine->_text->initSceneTextBank();
 	_engine->_input->enableKeyMap(mainKeyMapId);
-	free(animPtr);
 	free(modelPtr);
 }
 
@@ -431,8 +401,8 @@ void Holomap::renderLocations(int xRot, int yRot, int zRot, bool lower) {
 	for (int locationIdx = 0; locationIdx < NUM_LOCATIONS; ++locationIdx) {
 		if ((_engine->_gameState->holomapFlags[locationIdx] & 0x80) || locationIdx == _engine->_scene->currentSceneIdx) {
 			const Location &loc = _locations[locationIdx];
-			_engine->_renderer->setBaseRotation(loc.x, loc.y, 0);
-			_engine->_renderer->getBaseRotationPosition(0, 0, loc.z + 1000);
+			_engine->_renderer->setBaseRotation(loc.angle.x, loc.angle.y, 0);
+			_engine->_renderer->getBaseRotationPosition(0, 0, loc.angle.z + 1000);
 			int32 xpos1 = _engine->_renderer->destPos.x;
 			int32 ypos1 = _engine->_renderer->destPos.y;
 			int32 zpos1 = _engine->_renderer->destPos.z;
@@ -484,8 +454,8 @@ void Holomap::renderLocations(int xRot, int yRot, int zRot, bool lower) {
 			bodyPtr = _engine->_resources->holomapTwinsenArrowPtr;
 		}
 		if (bodyPtr != nullptr) {
-			int32 angleX = _locations[drawList.actorIdx].x;
-			int32 angleY = _locations[drawList.actorIdx].y;
+			int32 angleX = _locations[drawList.actorIdx].angle.x;
+			int32 angleY = _locations[drawList.actorIdx].angle.y;
 			_engine->_renderer->renderIsoModel(drawList.x, drawList.y, drawList.z, angleX, angleY, 0, bodyPtr);
 		}
 	}
@@ -517,8 +487,8 @@ void Holomap::processHolomap() {
 	_engine->flip();
 
 	int32 time = _engine->lbaTime;
-	int32 xRot = ClampAngle(_locations[currentLocation].x);
-	int32 yRot = ClampAngle(_locations[currentLocation].y);
+	int32 xRot = ClampAngle(_locations[currentLocation].angle.x);
+	int32 yRot = ClampAngle(_locations[currentLocation].angle.y);
 	bool rotate = false;
 	bool redraw = true;
 	int local18 = 0;
@@ -572,19 +542,19 @@ void Holomap::processHolomap() {
 
 		if (rotate) {
 			const int32 dt = _engine->lbaTime - time;
-			xRot = _engine->_collision->getAverageValue(ClampAngle(xRot), _locations[currentLocation].x, 75, dt);
-			yRot = _engine->_collision->getAverageValue(ClampAngle(yRot), _locations[currentLocation].y, 75, dt);
+			xRot = _engine->_collision->getAverageValue(ClampAngle(xRot), _locations[currentLocation].angle.x, 75, dt);
+			yRot = _engine->_collision->getAverageValue(ClampAngle(yRot), _locations[currentLocation].angle.y, 75, dt);
 			redraw = true;
 		}
 
 		if (!fadeInPalette && local18 < _engine->lbaTime) {
 			//const Common::Rect rect(170, 50, 470, 330);
 			//_engine->_interface->setClip(rect);
-			_engine->setPalette(192, 32, &paletteHolomap[3 * holomapPaletteIndex++]);
+			_engine->setPalette(192, 32, &_paletteHolomap[3 * _holomapPaletteIndex++]);
 			//_engine->copyBlockPhys(rect);
 			//_engine->_interface->resetClip();
-			if (holomapPaletteIndex == 32) {
-				holomapPaletteIndex = 0;
+			if (_holomapPaletteIndex == 32) {
+				_holomapPaletteIndex = 0;
 			}
 			local18 = _engine->lbaTime + 3;
 			redraw = true;
@@ -610,7 +580,7 @@ void Holomap::processHolomap() {
 			_engine->copyBlockPhys(rect);
 		}
 
-		if (rotate && xRot == _locations[currentLocation].x && yRot == _locations[currentLocation].y) {
+		if (rotate && xRot == _locations[currentLocation].angle.x && yRot == _locations[currentLocation].angle.y) {
 			rotate = false;
 		}
 

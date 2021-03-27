@@ -40,17 +40,18 @@ Resources::~Resources() {
 	for (size_t i = 0; i < ARRAYSIZE(spriteTable); ++i) {
 		free(spriteTable[i]);
 	}
-	for (size_t i = 0; i < ARRAYSIZE(animTable); ++i) {
-		free(animTable[i]);
-	}
 	for (size_t i = 0; i < ARRAYSIZE(samplesTable); ++i) {
 		free(samplesTable[i]);
+	}
+	for (size_t i = 0; i < ARRAYSIZE(bodyTable); ++i) {
+		free(bodyTable[i]);
 	}
 	free(fontPtr);
 	free(spriteShadowPtr);
 	free(holomapSurfacePtr);
 	free(holomapImagePtr);
 	free(holomapTwinsenModelPtr);
+	free(holomapPointModelPtr);
 	free(holomapTwinsenArrowPtr);
 	free(holomapArrowPtr);
 	free(_engine->_screens->mainPalette);
@@ -93,8 +94,7 @@ void Resources::preloadAnimations() {
 	}
 	debug("preload %i animations", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
-		animSizeTable[i] = HQR::getAllocEntry(&animTable[i], Resources::HQR_ANIM_FILE, i);
-		animData[i].loadFromBuffer(animTable[i], animSizeTable[i]);
+		animData[i].loadFromHQR(Resources::HQR_ANIM_FILE, i);
 	}
 }
 
@@ -143,7 +143,6 @@ void Resources::preloadInventoryItems() {
 	debug("preload %i inventory items", numEntries);
 	for (int32 i = 0; i < numEntries; i++) {
 		inventorySizeTable[i] = HQR::getAllocEntry(&inventoryTable[i], Resources::HQR_INVOBJ_FILE, i);
-		Renderer::prepareIsoModel(_engine->_resources->inventoryTable[i]);
 	}
 }
 
@@ -184,30 +183,26 @@ void Resources::initResources() {
 	if (holomapTwinsenModelSize == 0) {
 		error("Failed to load holomap twinsen model");
 	}
-	Renderer::prepareIsoModel(holomapTwinsenModelPtr);
 
 	holomapPointModelSize = HQR::getAllocEntry(&holomapPointModelPtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTMDL);
 	if (holomapPointModelSize == 0) {
 		error("Failed to load holomap point model");
 	}
-	Renderer::prepareIsoModel(holomapPointModelPtr);
 
 	holomapArrowSize = HQR::getAllocEntry(&holomapArrowPtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOARROWMDL);
 	if (holomapArrowSize == 0) {
 		error("Failed to load holomap arrow model");
 	}
-	Renderer::prepareIsoModel(holomapArrowPtr);
 
 	holomapTwinsenArrowSize = HQR::getAllocEntry(&holomapTwinsenArrowPtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOTWINARROWMDL);
 	if (holomapTwinsenArrowSize == 0) {
 		error("Failed to load holomap twinsen arrow model");
 	}
-	Renderer::prepareIsoModel(holomapTwinsenArrowPtr);
 
-	holomapPointAnimSize = HQR::getAllocEntry(&holomapPointAnimPtr, Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTANIM);
-	if (holomapPointAnimSize == 0) {
-		error("Failed to load holomap point anim data");
+	if (!_trajectories.loadFromHQR(Resources::HQR_RESS_FILE, RESSHQR_HOLOPOINTANIM)) {
+		error("Failed to parse trajectory data");
 	}
+	debug("preload %i trajectories", (int)_trajectories.getTrajectories().size());
 
 	preloadSprites();
 	preloadAnimations();
@@ -215,6 +210,10 @@ void Resources::initResources() {
 	preloadInventoryItems();
 
 	loadFlaInfo();
+}
+
+const Trajectory *Resources::getTrajectory(int index) const {
+	return _trajectories.getTrajectory(index);
 }
 
 void Resources::loadFlaInfo() {
