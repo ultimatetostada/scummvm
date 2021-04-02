@@ -21,6 +21,7 @@
  */
 
 #include "illusions/bbdou/illusions_bbdou.h"
+#include "illusions/bbdou/bbdou_bootparams.h"
 #include "illusions/bbdou/bbdou_menukeys.h"
 #include "illusions/bbdou/bbdou_videoplayer.h"
 #include "illusions/bbdou/gamestate_bbdou.h"
@@ -205,6 +206,12 @@ Common::Error IllusionsEngine_BBDOU::run() {
 	_doScriptThreadInit = false;
 	startScriptThread(0x00020004, 0, 0, 0, 0);
 	_doScriptThreadInit = true;
+
+	if (ConfMan.hasKey("boot_param")) {
+		int paramArg = ConfMan.getInt("boot_param");
+		BootParam param = BbdouBootParams::getBootParam(paramArg);
+		ScriptOpcodes_BBDOU::setDebugSceneAndThreadId(param.dsceneId, param.dthreadId);
+	}
 
 	if (ConfMan.hasKey("save_slot")) {
 		loadGameState(ConfMan.getInt("save_slot"));

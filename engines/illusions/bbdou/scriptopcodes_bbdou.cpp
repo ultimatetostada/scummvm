@@ -22,6 +22,7 @@
 
 #include "illusions/bbdou/illusions_bbdou.h"
 #include "illusions/bbdou/scriptopcodes_bbdou.h"
+#include "illusions/bbdou/bbdou_bootparams.h"
 #include "illusions/bbdou/bbdou_menukeys.h"
 #include "illusions/bbdou/gamestate_bbdou.h"
 #include "illusions/bbdou/menusystem_bbdou.h"
@@ -190,6 +191,15 @@ void ScriptOpcodes_BBDOU::freeOpcodes() {
 	}
 }
 
+void ScriptOpcodes_BBDOU::clearDebugSceneAndThreadId() {
+	setDebugSceneAndThreadId(0, 0);
+}
+
+void ScriptOpcodes_BBDOU::setDebugSceneAndThreadId(int sceneId, int threadId) {
+	debugSceneId = sceneId;
+	debugThreadId = threadId;
+}
+
 // Opcodes
 
 void ScriptOpcodes_BBDOU::opSuspend(ScriptThread *scriptThread, OpCall &opCall) {
@@ -308,38 +318,25 @@ void ScriptOpcodes_BBDOU::opUnloadActiveScenes(ScriptThread *scriptThread, OpCal
 	_vm->dumpActiveScenes(sceneId, opCall._callerThreadId);
 }
 
-//DEBUG Scenes
-//uint32 dsceneId = 0x00010031, dthreadId = 0x00020036;//MAP
-//uint32 dsceneId = 0x00010028, dthreadId = 0x000202A1;
-//uint32 dsceneId = 0x00010007, dthreadId = 0x0002000C;//Auditorium
-//uint32 dsceneId = 0x0001000B, dthreadId = 0x00020010;
-//uint32 dsceneId = 0x00010013, dthreadId = 0x00020018;//Therapist
-//uint32 dsceneId = 0x00010016, dthreadId = 0x0002001B;//Dorms ext
-//uint32 dsceneId = 0x00010017, dthreadId = 0x0002001C;//Dorms int
-//uint32 dsceneId = 0x0001000D, dthreadId = 0x00020012;//Food minigame
-//uint32 dsceneId = 0x00010067, dthreadId = 0x0002022A;
-uint32 dsceneId = 0x0001000C, dthreadId = 0x00020011;//Cafeteria
-//uint32 dsceneId = 0x0001000B, dthreadId = 0x00020010;
-//uint32 dsceneId = 0x0001001A, dthreadId = 0x0002001F;
-//uint32 dsceneId = 0x00010047, dthreadId = 0x0002005F;
-//uint32 dsceneId = 0x0001007D, dthreadId = 0x000203B9;
-// uint32 dsceneId = 0x0001000D, dthreadId = 0x00020012; // Food minigame
+//DEBUG Scenes - now implemented as boot parms
+int ScriptOpcodes_BBDOU::debugSceneId;
+int ScriptOpcodes_BBDOU::debugThreadId;
 
 void ScriptOpcodes_BBDOU::opChangeScene(ScriptThread *scriptThread, OpCall &opCall) {
 	ARG_SKIP(2);
 	ARG_UINT32(sceneId);
 	ARG_UINT32(threadId);
 
-	if (dsceneId) {
+	if (debugSceneId) {
 //#define RUN_WALKTHROUGH
 #ifdef RUN_WALKTHROUGH
 		_vm->_walkthroughStarted = true;
-		dsceneId = 0;
+		clearDebugSceneAndThreadId();
 		return;
 #endif
-		sceneId = dsceneId;
-		threadId = dthreadId;
-		dsceneId = 0;
+		sceneId = debugSceneId;
+		threadId = debugThreadId;
+		clearDebugSceneAndThreadId();
 	}
 
 	// NOTE Skipped checking for stalled resources

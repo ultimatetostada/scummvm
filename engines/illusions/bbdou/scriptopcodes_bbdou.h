@@ -37,6 +37,11 @@ public:
 	~ScriptOpcodes_BBDOU() override;
 	void initOpcodes() override;
 	void freeOpcodes() override;
+	static int debugSceneId;
+	static int debugThreadId;
+	static void setDebugSceneAndThreadId(int sceneId, int threadId);
+	static void clearDebugSceneAndThreadId();
+
 protected:
 	IllusionsEngine_BBDOU *_vm;
 

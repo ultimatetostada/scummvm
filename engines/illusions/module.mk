@@ -2,6 +2,7 @@ MODULE := engines/illusions
 
 MODULE_OBJS := \
 	actor.o \
+	bbdou/bbdou_bootparams.o \
 	bbdou/bbdou_bubble.o \
 	bbdou/bbdou_cursor.o \
 	bbdou/bbdou_credits.o \
