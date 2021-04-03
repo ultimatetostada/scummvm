@@ -37,30 +37,32 @@ public:
 	static BootParam getBootParam(int param);
 
 private:
-	static const int BOOT_PARAM_COUNT = 24;
+	static const int BOOT_PARAM_COUNT = 26;
 	constexpr static BootParam BootParams[BOOT_PARAM_COUNT] = {
-		{0x00000000, 0x00000000}, //start
-		{0x00010031, 0x00020036}, //MAP
+		{0x00000000, 0x00000000}, //Highland High - Default
+		{0x00010006, 0x00020007}, //Highland High
 		{0x00010007, 0x0002000C}, //Auditorium
-		{0x00010028, 0x000202A1}, //Music room
-		{0x0001001C, 0x00020021}, //Agriculture
-		{0x0001001D, 0x00020022}, //Agriculture Bull
-		{0x0001000B, 0x00020010}, //Quad
-		{0x0001000E, 0x00020013}, //Java
-		{0x00010012, 0x00020017}, //Dean
-		{0x00010013, 0x00020018}, //Therapist
+		{0x00010079, 0x0002039C}, //Student Union cutscene
+		{0x00010031, 0x00020036}, //MAP
+		{0x00010019, 0x0002001E}, //Library
+		{0x0001003E, 0x00020056}, //Library Computer
 		{0x00010016, 0x0002001B}, //Dorms ext
 		{0x00010017, 0x0002001C}, //Dorms int
+		{0x00010028, 0x000202A1}, //Music room
+		{0x00010012, 0x00020017}, //Dean
+		{0x00010013, 0x00020018}, //Therapist
+		{0x0001000B, 0x00020010}, //Quad
+		{0x0001001C, 0x00020021}, //Agriculture
+		{0x0001001D, 0x00020022}, //Agriculture Bull
+		{0x0001001A, 0x0002001F}, //Communications
+		{0x0001000E, 0x00020013}, //Java
 		{0x0001003C, 0x00020054}, //Dumpster
 		{0x0001003A, 0x00020052}, //Bathroom
 		{0x0001003B, 0x00020053}, //Laundry
-		{0x00010019, 0x0002001E}, //Library
-		{0x0001003E, 0x00020056}, //Library Computer
 		{0x00010018, 0x0002001D}, //Dorm Room
 		{0x0001000D, 0x00020012}, //Food minigame | Fails after dialog
 		{0x00010067, 0x0002022A}, //Salad Bar
 		{0x0001000C, 0x00020011}, //Cafeteria
-		{0x0001001A, 0x0002001F}, //Communications
 		{0x00010047, 0x0002005F}, //Frat House - Shooting minigame | Scene crash when click to shoot
 		{0x0001007D, 0x000203B9}  //Credits
 	};
