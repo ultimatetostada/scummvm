@@ -695,9 +695,9 @@ void ScriptOpcodes_BBDOU::opAddMenuChoice(ScriptThread *scriptThread, OpCall &op
 }
 
 void ScriptOpcodes_BBDOU::opDisplayMenu(ScriptThread *scriptThread, OpCall &opCall) {
-	ARG_INT16(timeoutChoiceOfs);
+	ARG_INT16(timeOutDuration);
 	ARG_UINT32(menuId);
-	ARG_UINT32(timeOutDuration);
+	ARG_UINT32(timeoutChoiceOfs);
 
 	MenuChoiceOffsets menuChoiceOffsets;
 
@@ -707,7 +707,7 @@ void ScriptOpcodes_BBDOU::opDisplayMenu(ScriptThread *scriptThread, OpCall &opCa
 		menuChoiceOffsets.push_back(choiceOffs);
 	} while (_vm->_stack->pop() == 0);
 
-#if 1 // TODO DEBUG Start menu not yet implemented, fake selection of "Start game"
+#if 0 // TODO DEBUG Start menu not yet implemented, fake selection of "Start game"
 	if (menuId == 0x001C0001) {
 		_vm->_menuChoiceOfs = 88;
 		_vm->notifyThreadId(opCall._callerThreadId);
