@@ -40,6 +40,10 @@
 #include "graphics/surface.h"
 #include "illusions/detection.h"
 
+namespace GUI {
+class Debugger;
+}
+
 namespace Illusions {
 
 char *debugW2I(uint16 *wstr);
@@ -60,6 +64,7 @@ class Camera;
 class Control;
 class Controls;
 class Cursor;
+class Debugger;
 class Dictionary;
 struct Fader;
 class FramesList;
@@ -110,6 +115,7 @@ public:
 	SpecialCode *_specialCode;
 	ThreadList *_threads;
 	SoundMan *_soundMan;
+	Debugger *_debugger;
 
 	uint32 _nextTempThreadId;
 	bool _doScriptThreadInit;

@@ -24,6 +24,7 @@
 #include "illusions/actor.h"
 #include "illusions/camera.h"
 #include "illusions/cursor.h"
+#include "illusions/debugger.h"
 #include "illusions/dictionary.h"
 #include "illusions/resources/fontresource.h"
 #include "illusions/graphics.h"
@@ -87,6 +88,8 @@ IllusionsEngine::IllusionsEngine(OSystem *syst, const IllusionsGameDescription *
 
 	_random = new Common::RandomSource("illusions");
 
+	DebugMan.addDebugChannel(kIllusionsDebugVideo, "Video", "Toggle video playback");
+
 	_rerunThreads = false;
 
 	_isSaveAllowed = true; // TODO
@@ -98,12 +101,13 @@ IllusionsEngine::IllusionsEngine(OSystem *syst, const IllusionsGameDescription *
 
 	Engine::syncSoundSettings();
 
+	_debugger = new Debugger(this);
+	setDebugger(_debugger);
 }
 
 IllusionsEngine::~IllusionsEngine() {
-
+	DebugMan.clearAllDebugChannels();
 	delete _random;
-
 }
 
 void IllusionsEngine::updateEvents() {
