@@ -23,6 +23,7 @@
 #include "illusions/illusions.h"
 #include "illusions/actor.h"
 #include "illusions/cursor.h"
+#include "illusions/sound.h"
 #include "illusions/bbdou/illusions_bbdou.h"
 #include "illusions/bbdou/menusystem_bbdou.h"
 
@@ -78,6 +79,10 @@ BaseMenu *BBDOUMenuSystem::createMenuById(int menuId) {
 		return createMainMenu();
 	case kBBDOUPauseMenu:
 		return createPauseMenu();
+	case kBBDOUOptionsMenu:
+		return createOptionsMenu();
+	case kBBDOUQueryQuitMenu:
+		return createQueryQuitMenu();
 	// TODO Other menus
 	default:
 		error("BBDOUMenuSystem::createMenuById() Invalid menu id %d", menuId);
@@ -85,15 +90,41 @@ BaseMenu *BBDOUMenuSystem::createMenuById(int menuId) {
 }
 
 BaseMenu *BBDOUMenuSystem::createMainMenu() {
-	return 0; // TODO
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	menu->addMenuItem(new MenuItem("Start the Game", new MenuActionReturnChoice(this, 1)));
+	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
+	menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kBBDOUOptionsMenu)));
+	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 4)));
+	return menu;
 }
 
 BaseMenu *BBDOUMenuSystem::createLoadGameMenu() {
 	return 0; // TODO
 }
 
-BaseMenu *BBDOUMenuSystem::createOptionsMenu() {
+BaseMenu *BBDOUMenuSystem::createLoadFailedMenu() {
 	return 0; // TODO
+}
+
+BaseMenu *BBDOUMenuSystem::createOptionsMenu() {
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	/*BBDOUMenuActionUpdateSlider *sfxSlider;
+	BBDOUMenuActionUpdateSlider *musicSlider;
+	BBDOUMenuActionUpdateSlider *speechSlider;
+	BBDOUMenuActionUpdateSlider *textDurationSlider;*/
+
+	menu->addText("              GAME OPTIONS             @@@@");
+	menu->addText("--------------------------------------");
+
+	//menu->addMenuItem(createOptionsSliderMenuItem(&sfxSlider, "Sound Volume   @@", SFX, menu));
+	//menu->addMenuItem(createOptionsSliderMenuItem(&musicSlider, "Music Volume  @@@", MUSIC, menu));
+	//menu->addMenuItem(createOptionsSliderMenuItem(&speechSlider, "Speech Volume ", VOICE, menu));
+	//menu->addMenuItem(createOptionsSliderMenuItem(&textDurationSlider, "Text Duration @@@", TEXT_DURATION, menu));
+
+	//menu->addMenuItem(new MenuItem("Restore Defaults", new MenuActionResetOptionSliders(this, sfxSlider, musicSlider, speechSlider, textDurationSlider)));
+	menu->addMenuItem(new MenuItem("Back", new MenuActionLeaveMenu(this)));
+
+	return menu;
 }
 
 BaseMenu *BBDOUMenuSystem::createPauseMenu() {
@@ -107,6 +138,30 @@ BaseMenu *BBDOUMenuSystem::createPauseMenu() {
 	// TODO menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kDuckmanOptionsMenu)));
 	// menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kDuckmanQueryQuitMenu, 23)));
 	return menu;
+}
+
+BaseMenu *BBDOUMenuSystem::createQueryQuitMenu() {
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	
+	menu->addText("Do you really want to quit?");
+	menu->addText("-------------------------------");
+	menu->addMenuItem(new MenuItem("Yes, I'm outta here", new MenuActionReturnChoice(this, getQueryConfirmationChoiceIndex())));
+	menu->addMenuItem(new MenuItem("No, just kidding", new MenuActionLeaveMenu(this)));
+	
+	return menu;
+}
+
+
+BaseMenu *BBDOUMenuSystem::createSaveGameMenu() {
+	return 0; // TODO
+}
+
+BaseMenu *BBDOUMenuSystem::createGameSavedMenu() {
+	return 0; // TODO
+}
+
+BaseMenu *BBDOUMenuSystem::createSaveFailedMenu() {
+	return 0; // TODO
 }
 
 int BBDOUMenuSystem::convertRootMenuId(uint32 menuId) {

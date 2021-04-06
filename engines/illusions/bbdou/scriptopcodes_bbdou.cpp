@@ -28,6 +28,7 @@
 #include "illusions/bbdou/menusystem_bbdou.h"
 #include "illusions/actor.h"
 #include "illusions/camera.h"
+#include "illusions/debugger.h"
 #include "illusions/dictionary.h"
 #include "illusions/input.h"
 #include "illusions/resources/scriptresource.h"
@@ -706,12 +707,13 @@ void ScriptOpcodes_BBDOU::opDisplayMenu(ScriptThread *scriptThread, OpCall &opCa
 		menuChoiceOffsets.push_back(choiceOffs);
 	} while (_vm->_stack->pop() == 0);
 
-	// TODO DBEUG Start menu not yet implemented, fake selection of "Start game"
+#if 1 // TODO DEBUG Start menu not yet implemented, fake selection of "Start game"
 	if (menuId == 0x001C0001) {
 		_vm->_menuChoiceOfs = 88;
 		_vm->notifyThreadId(opCall._callerThreadId);
 		return;
 	}
+#endif
 
 	// Duckman has the timeout choice offset on the stack and the index as parameter
 	// BBDOU instead has only the choice offset as parameter
@@ -861,12 +863,18 @@ void ScriptOpcodes_BBDOU::opPlayVideo(ScriptThread *scriptThread, OpCall &opCall
 	ARG_UINT32(objectId);
 	ARG_UINT32(videoId);
 	ARG_UINT32(priority);
-#if 0 // TODO DEBUG Set to 0 to skip videos
-	_vm->playVideo(videoId, objectId, priority, opCall._threadId);
-#else
-	//DEBUG Resume calling thread, later done by the video player
-	_vm->notifyThreadId(opCall._callerThreadId);
-#endif
+//#if 0 // TODO DEBUG Set to 0 to skip videos
+//	_vm->playVideo(videoId, objectId, priority, opCall._threadId);
+//#else
+//	//DEBUG Resume calling thread, later done by the video player
+//	_vm->notifyThreadId(opCall._callerThreadId);
+//#endif
+	if (_vm->_debugger->_videoPlaybackToggle) { // TODO DEBUG Set to 0 to skip videos
+		_vm->playVideo(videoId, objectId, priority, opCall._threadId);
+	} else {
+		//DEBUG Resume calling thread, later done by the video player
+		_vm->notifyThreadId(opCall._callerThreadId);
+	}
 }
 
 void ScriptOpcodes_BBDOU::opStackPop(ScriptThread *scriptThread, OpCall &opCall) {

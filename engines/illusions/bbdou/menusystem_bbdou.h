@@ -27,6 +27,12 @@
 
 namespace Illusions {
 
+enum BBDOUSliderActionType {
+	SOUND,
+	SPEECH,
+	TEXT_DURATION
+};
+
 enum {
 	kBBDOUMainMenu,
 	kBBDOUPauseMenu,
@@ -35,6 +41,8 @@ enum {
 	kBBDOUGameSavedMenu,
 	kBBDOUSaveFailedMenu,
 	kBBDOULoadFailedMenu,
+	kBBDOUOptionsMenu,
+	kBBDOUQueryQuitMenu,
 	kBBDOULastMenuIndex
 };
 
@@ -55,6 +63,7 @@ public://protected:
 	BaseMenu *createMenuById(int menuId);
 	BaseMenu *createMainMenu();
 	BaseMenu *createPauseMenu();
+	BaseMenu *createQueryQuitMenu();
 	BaseMenu *createLoadGameMenu();
 	BaseMenu *createSaveGameMenu();
 	BaseMenu *createGameSavedMenu();
