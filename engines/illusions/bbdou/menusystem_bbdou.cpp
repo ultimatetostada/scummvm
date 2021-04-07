@@ -83,6 +83,8 @@ BaseMenu *BBDOUMenuSystem::createMenuById(int menuId) {
 		return createOptionsMenu();
 	case kBBDOUQueryQuitMenu:
 		return createQueryQuitMenu();
+	case kBBDOUQueryRestartMenu:
+		return createQueryRestartMenu();
 	// TODO Other menus
 	default:
 		error("BBDOUMenuSystem::createMenuById() Invalid menu id %d", menuId);
@@ -94,7 +96,7 @@ BaseMenu *BBDOUMenuSystem::createMainMenu() {
 	menu->addMenuItem(new MenuItem("Start the Game", new MenuActionReturnChoice(this, 1)));
 	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
 	menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kBBDOUOptionsMenu)));
-	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 4)));
+	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 3)));
 	return menu;
 }
 
@@ -117,10 +119,9 @@ BaseMenu *BBDOUMenuSystem::createOptionsMenu() {
 	menu->addText("--------------------------------------");
 
 	//menu->addMenuItem(createOptionsSliderMenuItem(&sfxSlider, "Sound Volume   @@", SFX, menu));
-	//menu->addMenuItem(createOptionsSliderMenuItem(&musicSlider, "Music Volume  @@@", MUSIC, menu));
+	//NOT USED: menu->addMenuItem(createOptionsSliderMenuItem(&musicSlider, "Music Volume  @@@", MUSIC, menu));
 	//menu->addMenuItem(createOptionsSliderMenuItem(&speechSlider, "Speech Volume ", VOICE, menu));
 	//menu->addMenuItem(createOptionsSliderMenuItem(&textDurationSlider, "Text Duration @@@", TEXT_DURATION, menu));
-
 	//menu->addMenuItem(new MenuItem("Restore Defaults", new MenuActionResetOptionSliders(this, sfxSlider, musicSlider, speechSlider, textDurationSlider)));
 	menu->addMenuItem(new MenuItem("Back", new MenuActionLeaveMenu(this)));
 
@@ -132,11 +133,20 @@ BaseMenu *BBDOUMenuSystem::createPauseMenu() {
 	menu->addText("   Game Paused");
 	menu->addText("-------------------");
 	menu->addMenuItem(new MenuItem("Resume", new MenuActionReturnChoice(this, 1)));
-	// menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
-	// TODO menu->addMenuItem(new MenuItem("Save Game", new MenuActionSaveGame(this, 11)));
-	// TODO menu->addMenuItem(new MenuItem("Restart Game", new MenuActionEnterQueryMenu(this, kDuckmanQueryRestartMenu, 2)));
-	// TODO menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kDuckmanOptionsMenu)));
-	// menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kDuckmanQueryQuitMenu, 23)));
+	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
+	menu->addMenuItem(new MenuItem("Save Game", new MenuActionSaveGame(this, 11)));
+	menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kBBDOUOptionsMenu)));
+	menu->addMenuItem(new MenuItem("Restart Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryRestartMenu, 4)));
+	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 5)));
+	return menu;
+}
+
+BaseMenu *BBDOUMenuSystem::createQueryRestartMenu() {
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	menu->addText("Do you really want to restart?");
+	menu->addText("-----------------------------------");
+	menu->addMenuItem(new MenuItem("Yes, let's try again", new MenuActionReturnChoice(this, getQueryConfirmationChoiceIndex())));
+	menu->addMenuItem(new MenuItem("No, just kidding", new MenuActionLeaveMenu(this)));
 	return menu;
 }
 

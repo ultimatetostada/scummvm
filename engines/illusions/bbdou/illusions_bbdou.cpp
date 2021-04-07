@@ -218,7 +218,7 @@ Common::Error IllusionsEngine_BBDOU::run() {
 	}
 
 	_walkthroughStarted = false;
-	_canResumeFromSavegame = false;
+	_canResumeFromSavegame = true;
 
 	while (!shouldQuit()) {
 		if (_walkthroughStarted) {

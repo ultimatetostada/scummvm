@@ -43,6 +43,7 @@ enum {
 	kBBDOULoadFailedMenu,
 	kBBDOUOptionsMenu,
 	kBBDOUQueryQuitMenu,
+	kBBDOUQueryRestartMenu,
 	kBBDOULastMenuIndex
 };
 
@@ -63,6 +64,7 @@ public://protected:
 	BaseMenu *createMenuById(int menuId);
 	BaseMenu *createMainMenu();
 	BaseMenu *createPauseMenu();
+	BaseMenu *createQueryRestartMenu();
 	BaseMenu *createQueryQuitMenu();
 	BaseMenu *createLoadGameMenu();
 	BaseMenu *createSaveGameMenu();
