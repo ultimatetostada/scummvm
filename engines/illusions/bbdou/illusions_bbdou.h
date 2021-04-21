@@ -53,6 +53,7 @@ public:
 	uint getActiveScenesCount();
 	void getActiveSceneInfo(uint index, uint32 *sceneId, int *pauseCtr);
 	uint32 getCurrentScene();
+	uint32 getPreviousScene();
 	bool isSceneActive(uint32 sceneId);
 protected:
 	Common::FixedStack<ActiveScene, 16> _stack;
@@ -153,8 +154,8 @@ public:
 	bool findTriggerCause(uint32 sceneId, uint32 verbId, uint32 objectId2, uint32 objectId, uint32 &codeOffs);
 	void reset();
 
-	void loadSavegameFromScript(int16 slotNum, uint32 callingThreadId);
-	void saveSavegameFromScript(int16 slotNum, uint32 callingThreadId);
+	bool loadSavegameFromScript(int16 slotNum, uint32 callingThreadId);
+	bool saveSavegameFromScript(int16 slotNum, uint32 callingThreadId);
 	void activateSavegame(uint32 callingThreadId);
 	void resumeFromSavegame();
 

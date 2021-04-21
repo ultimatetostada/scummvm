@@ -32,20 +32,20 @@ BBDOU_GameState::BBDOU_GameState(IllusionsEngine_BBDOU *vm)
 
 uint32 BBDOU_GameState::calcWriteBufferSizeInternal() {
 	return
-		4 + // uint32 prevSceneId
+		//4 + // uint32 prevSceneId
 		_vm->_scriptResource->_properties.getSize() +
 		_vm->_scriptResource->_blockCounters.getSize();
 }
 
 bool BBDOU_GameState::readStateInternal(Common::ReadStream *in) {
-	_vm->_prevSceneId = in->readUint32LE();
+	//_vm->_prevSceneId = in->readUint32LE();
 	return
 		_vm->_scriptResource->_properties.readFromStream(in) &&
 		_vm->_scriptResource->_blockCounters.readFromStream(in);
 }
 
 void BBDOU_GameState::writeStateInternal(Common::WriteStream *out) {
-	out->writeUint32LE(_vm->_prevSceneId);
+	//out->writeUint32LE(_vm->_prevSceneId);
 	_vm->_scriptResource->_properties.writeToStream(out);
 	_vm->_scriptResource->_blockCounters.writeToStream(out);
 }

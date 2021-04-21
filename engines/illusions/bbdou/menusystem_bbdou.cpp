@@ -85,6 +85,10 @@ BaseMenu *BBDOUMenuSystem::createMenuById(int menuId) {
 		return createQueryQuitMenu();
 	case kBBDOUQueryRestartMenu:
 		return createQueryRestartMenu();
+	case kBBDOULoadGameMenu:
+		return createLoadGameMenu();
+	case kBBDOUSaveGameMenu:
+		return createSaveCompleteMenu(); //createSaveGameMenu();
 	// TODO Other menus
 	default:
 		error("BBDOUMenuSystem::createMenuById() Invalid menu id %d", menuId);
@@ -93,15 +97,20 @@ BaseMenu *BBDOUMenuSystem::createMenuById(int menuId) {
 
 BaseMenu *BBDOUMenuSystem::createMainMenu() {
 	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
-	menu->addMenuItem(new MenuItem("Start the Game", new MenuActionReturnChoice(this, 1)));
-	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
+	menu->addMenuItem(new MenuItem("Start the Game", new MenuActionReturnChoice(this, 1))); //putting 6 here causes opcode 33 to be called...
+	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 2)));
 	menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kBBDOUOptionsMenu)));
 	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 3)));
 	return menu;
 }
 
+//this call isn't made in duckman, why is it needed here?
 BaseMenu *BBDOUMenuSystem::createLoadGameMenu() {
-	return 0; // TODO
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	menu->addText("Loading OK");
+	menu->addText("-------------");
+	menu->addMenuItem(new MenuItem("Continue", new MenuActionReturnChoice(this, 1)));
+	return menu;
 }
 
 BaseMenu *BBDOUMenuSystem::createLoadFailedMenu() {
@@ -133,8 +142,8 @@ BaseMenu *BBDOUMenuSystem::createPauseMenu() {
 	menu->addText("   Game Paused");
 	menu->addText("-------------------");
 	menu->addMenuItem(new MenuItem("Resume", new MenuActionReturnChoice(this, 1)));
-	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 1)));
-	menu->addMenuItem(new MenuItem("Save Game", new MenuActionSaveGame(this, 11)));
+	menu->addMenuItem(new MenuItem("Load Game", new MenuActionLoadGame(this, 2)));
+	menu->addMenuItem(new MenuItem("Save Game", new MenuActionSaveGame(this, 3)));//2 works but gets to load //11 orig
 	menu->addMenuItem(new MenuItem("Options", new MenuActionEnterMenu(this, kBBDOUOptionsMenu)));
 	menu->addMenuItem(new MenuItem("Restart Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryRestartMenu, 4)));
 	menu->addMenuItem(new MenuItem("Quit Game", new MenuActionEnterQueryMenu(this, kBBDOUQueryQuitMenu, 5)));
@@ -161,13 +170,20 @@ BaseMenu *BBDOUMenuSystem::createQueryQuitMenu() {
 	return menu;
 }
 
-
 BaseMenu *BBDOUMenuSystem::createSaveGameMenu() {
 	return 0; // TODO
 }
 
 BaseMenu *BBDOUMenuSystem::createGameSavedMenu() {
 	return 0; // TODO
+}
+
+BaseMenu *BBDOUMenuSystem::createSaveCompleteMenu() {
+	BaseMenu *menu = new BaseMenu(this, 0x00120003, 218, 150, 80, 20, 1);
+	menu->addText("Game Saved");
+	menu->addText("-------------");
+	menu->addMenuItem(new MenuItem("Continue", new MenuActionReturnChoice(this, 1)));
+	return menu;
 }
 
 BaseMenu *BBDOUMenuSystem::createSaveFailedMenu() {

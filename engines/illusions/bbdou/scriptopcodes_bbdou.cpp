@@ -342,7 +342,7 @@ void ScriptOpcodes_BBDOU::opChangeScene(ScriptThread *scriptThread, OpCall &opCa
 
 	// NOTE Skipped checking for stalled resources
 	_vm->_input->discardAllEvents();
-	_vm->_prevSceneId = _vm->getCurrentScene();
+	//_vm->_prevSceneId = _vm->getCurrentScene();
 	_vm->exitScene(opCall._callerThreadId);
 	_vm->enterScene(sceneId, opCall._callerThreadId);
 	_vm->_gameState->writeState(sceneId, threadId);
@@ -747,7 +747,8 @@ void ScriptOpcodes_BBDOU::opSaveGame(ScriptThread *scriptThread, OpCall &opCall)
 	ARG_SKIP(2);
 	ARG_INT16(bankNum)
 	ARG_INT16(slotNum)
-	_vm->saveSavegameFromScript(slotNum, opCall._callerThreadId);
+	bool success = _vm->saveSavegameFromScript(slotNum, opCall._callerThreadId);
+	_vm->_stack->push(success ? 1 : 0);
 }
 
 void ScriptOpcodes_BBDOU::opRestoreGameState(ScriptThread *scriptThread, OpCall &opCall) {
@@ -778,7 +779,8 @@ void ScriptOpcodes_BBDOU::opJumpIf(ScriptThread *scriptThread, OpCall &opCall) {
 void ScriptOpcodes_BBDOU::opIsPrevSceneId(ScriptThread *scriptThread, OpCall &opCall) {
 	ARG_SKIP(2);
 	ARG_UINT32(sceneId);
-	_vm->_stack->push(_vm->_prevSceneId == sceneId ? 1 : 0);
+	//_vm->_stack->push(_vm->_prevSceneId == sceneId ? 1 : 0);
+	_vm->_stack->push(_vm->getPrevScene() == sceneId ? 1 : 0);
 }
 
 void ScriptOpcodes_BBDOU::opIsCurrentSceneId(ScriptThread *scriptThread, OpCall &opCall) {
@@ -869,7 +871,7 @@ void ScriptOpcodes_BBDOU::opPlayVideo(ScriptThread *scriptThread, OpCall &opCall
 //	//DEBUG Resume calling thread, later done by the video player
 //	_vm->notifyThreadId(opCall._callerThreadId);
 //#endif
-	if (_vm->_debugger->_videoPlaybackToggle) { // TODO DEBUG Set to 0 to skip videos
+	if (_vm->_debugger->_videoPlaybackToggle && false) { // TODO DEBUG Set to 0 to skip videos
 		_vm->playVideo(videoId, objectId, priority, opCall._threadId);
 	} else {
 		//DEBUG Resume calling thread, later done by the video player
@@ -946,7 +948,8 @@ void ScriptOpcodes_BBDOU::opLoadGame(ScriptThread *scriptThread, OpCall &opCall)
 	ARG_SKIP(2);
 	ARG_INT16(bankNum)
 	ARG_INT16(slotNum)
-	_vm->loadSavegameFromScript(slotNum, opCall._callerThreadId);
+	bool success = _vm->loadSavegameFromScript(slotNum, opCall._callerThreadId);
+	_vm->_stack->push(success ? 1 : 0);
 }
 
 void ScriptOpcodes_BBDOU::opPushLoadgameResult(ScriptThread *scriptThread, OpCall &opCall) {
@@ -987,7 +990,7 @@ void ScriptOpcodes_BBDOU::opChangeSceneAll(ScriptThread *scriptThread, OpCall &o
 	ARG_UINT32(threadId);
 	// NOTE Skipped checking for stalled resources
 	_vm->_input->discardAllEvents();
-	_vm->_prevSceneId = _vm->getCurrentScene();
+	//_vm->_prevSceneId = _vm->getCurrentScene();
 	_vm->dumpActiveScenes(_vm->_globalSceneId, opCall._callerThreadId);
 	_vm->enterScene(sceneId, opCall._callerThreadId);
 	_vm->_gameState->writeState(sceneId, threadId);

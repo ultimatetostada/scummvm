@@ -68,6 +68,7 @@ public://protected:
 	BaseMenu *createQueryQuitMenu();
 	BaseMenu *createLoadGameMenu();
 	BaseMenu *createSaveGameMenu();
+	BaseMenu *createSaveCompleteMenu();
 	BaseMenu *createGameSavedMenu();
 	BaseMenu *createSaveFailedMenu();
 	BaseMenu *createLoadFailedMenu();

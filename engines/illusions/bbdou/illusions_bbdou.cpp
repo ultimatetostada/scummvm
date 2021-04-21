@@ -117,6 +117,12 @@ uint32 ActiveScenes::getCurrentScene() {
 	return 0;
 }
 
+uint32 ActiveScenes::getPreviousScene() {
+	if (_stack.size() > 1)
+		return _stack[1]._sceneId;
+	return 0;
+}
+
 bool ActiveScenes::isSceneActive(uint32 sceneId) {
 	for (uint i = 0; i < _stack.size(); ++i) {
 		if (_stack[i]._sceneId == sceneId && _stack[i]._pauseCtr <= 0)
@@ -218,7 +224,7 @@ Common::Error IllusionsEngine_BBDOU::run() {
 	}
 
 	_walkthroughStarted = false;
-	_canResumeFromSavegame = true;
+	_canResumeFromSavegame = false;
 
 	while (!shouldQuit()) {
 		if (_walkthroughStarted) {
@@ -673,21 +679,28 @@ void IllusionsEngine_BBDOU::reset() {
 	setTextDuration(1, 0);
 }
 
-void IllusionsEngine_BBDOU::loadSavegameFromScript(int16 slotNum, uint32 callingThreadId) {
-	// NOTE Just loads the savegame, doesn't activate it yet
+bool IllusionsEngine_BBDOU::loadSavegameFromScript(int16 slotNum, uint32 callingThreadId) {
+	//if (_savegameSlotNum < 0) {
+	//	return false; // TODO need to handle reset from new game (without exising savegame).
+	//}
+	
 	const char *fileName = getSavegameFilename(_savegameSlotNum);
-	_loadGameResult = loadgame(fileName);
+	bool success = loadgame(fileName);
+	if (success)
+		activateSavegame(callingThreadId);
+
+	_gameState->deleteReadStream();
+	return success;
 }
 
-void IllusionsEngine_BBDOU::saveSavegameFromScript(int16 slotNum, uint32 callingThreadId) {
-	// TODO
-	// const char *fileName = getSavegameFilename(slotNum);
-	_saveGameResult = false;//savegame(fileName, _savegameDescription.c_str());
+bool IllusionsEngine_BBDOU::saveSavegameFromScript(int16 slotNum, uint32 callingThreadId) {
+	const char *fileName = getSavegameFilename(_savegameSlotNum);
+	return savegame(fileName, _savegameDescription.c_str());
 }
 
 void IllusionsEngine_BBDOU::activateSavegame(uint32 callingThreadId) {
 	uint32 sceneId, threadId;
-	_prevSceneId = 0x10000;
+	//_prevSceneId = 0x10000;
 	_gameState->readState(sceneId, threadId);
 	enterScene(sceneId, callingThreadId);
 	// TODO Check if value8, valueC, value10 are needed at all
